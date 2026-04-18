@@ -12,11 +12,14 @@ def get_client() -> OpenAI:
     return _client
 
 
-def chat(system: str, user: str, max_tokens: int = 2048) -> str:
+def chat(system: str, user: str, max_tokens: int = 2048, temperature: float = 0.0, seed: int = 42) -> str:
+    """temperature=0 + seed makes scoring deterministic across calls."""
     client = get_client()
     response = client.chat.completions.create(
         model="gpt-4o",
         max_tokens=max_tokens,
+        temperature=temperature,
+        seed=seed,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},

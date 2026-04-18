@@ -119,6 +119,28 @@ def get_review_status(
     return ReviewStatusResponse(id=review.id, status=review.status)
 
 
+@router.get("/{review_id}/progress")
+def get_review_progress(
+    project_id: str,
+    review_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns real-time processing log for the brain simulation side panel."""
+    _get_project(project_id, current_user.id, db)
+    review = db.query(VideoReview).filter(VideoReview.id == review_id, VideoReview.project_id == project_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return {
+        "id": review.id,
+        "status": review.status,
+        "processing_log": review.processing_log or [],
+        "overall_score": review.overall_score,
+        "tribe_used": review.tribe_used,
+        "tribe_raw": review.tribe_raw_output,
+    }
+
+
 @router.get("/{review_id}", response_model=ReviewResponse)
 def get_review(
     project_id: str,

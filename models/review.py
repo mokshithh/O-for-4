@@ -66,6 +66,9 @@ class VideoReview(Base):
     tribe_raw_output = Column(JSON, nullable=True)
     tribe_used = Column(Boolean, default=False)
 
+    # Real-time processing log [{stage, label, done, detail, ts}]
+    processing_log = Column(JSON, nullable=True, default=list)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

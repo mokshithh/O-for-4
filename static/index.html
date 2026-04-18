@@ -115,6 +115,24 @@
     .progress-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 6px; }
     .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s; }
 
+    /* Review split layout */
+    .review-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+    @media (max-width: 700px) { .review-layout { grid-template-columns: 1fr; } }
+
+    /* Brain sim panel */
+    .brain-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: sticky; top: 20px; }
+    .brain-panel h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--accent-light); }
+    .brain-panel .subtitle { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .brain-canvas-wrap { margin-bottom: 14px; }
+    .stage-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+    .stage-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; padding: 6px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); transition: border-color 0.2s; }
+    .stage-item.active { border-color: var(--accent); }
+    .stage-item.done { border-color: #1a3a1a; }
+    .stage-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    .stage-label { font-weight: 600; color: var(--text); }
+    .stage-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .brain-model-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #1a0d2e; color: var(--accent-light); font-weight: 600; display: inline-block; margin-bottom: 10px; }
+
     /* Feedback */
     .coaching-box { background: #1a0d2e; border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
     .coaching-box p { font-size: 14px; line-height: 1.6; }
@@ -439,41 +457,63 @@
         <div class="step done">4. Script</div>
         <div class="step done">5. Review</div>
       </div>
-      <div id="results-loading" class="loading"><div class="spinner"></div>Analysing your video…</div>
-      <div id="results-content" style="display:none">
-        <!-- Header -->
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div>
-              <h2>Video Review</h2>
-              <div id="perf-badge-wrap" style="margin-top:8px"></div>
+
+      <div class="review-layout">
+        <!-- LEFT: main results -->
+        <div id="results-main">
+          <div id="results-loading" class="loading" style="padding:40px 0"><div class="spinner"></div>Waiting for brain analysis…</div>
+          <div id="results-content" style="display:none">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                  <h2>Video Review</h2>
+                  <div id="perf-badge-wrap" style="margin-top:8px"></div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:48px;font-weight:700" id="overall-score-display"></div>
+                  <div style="font-size:12px;color:var(--muted)">Overall Score</div>
+                </div>
+              </div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:48px;font-weight:700" id="overall-score-display"></div>
-              <div style="font-size:12px;color:var(--muted)">Overall Score</div>
+            <div class="score-grid" id="score-grid"></div>
+            <div class="card">
+              <h2>Creator Coaching</h2>
+              <div class="coaching-box" id="coaching-text"></div>
+              <h3 style="font-size:14px;font-weight:600;margin:16px 0 12px">Improvement Suggestions</h3>
+              <ul class="suggestions-list" id="suggestions-list"></ul>
+            </div>
+            <div id="divergence-alert" style="display:none" class="alert alert-error"></div>
+            <div class="card">
+              <h2>Segment Analysis</h2>
+              <p class="subtitle">Timestamped breakdown of attention and engagement.</p>
+              <div class="segment-list" id="segment-list"></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:16px">
+              <button class="btn btn-primary" onclick="showScreen('screen-dashboard')">← Dashboard</button>
+              <button class="btn btn-ghost" onclick="showScreen('screen-setup')">New Project</button>
             </div>
           </div>
         </div>
-        <!-- Score breakdown -->
-        <div class="score-grid" id="score-grid"></div>
-        <!-- Coaching -->
-        <div class="card">
-          <h2>Creator Coaching</h2>
-          <div class="coaching-box" id="coaching-text"></div>
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Improvement Suggestions</h3>
-          <ul class="suggestions-list" id="suggestions-list"></ul>
-        </div>
-        <!-- Script divergence -->
-        <div id="divergence-alert" style="display:none" class="alert alert-error"></div>
-        <!-- Segment breakdown -->
-        <div class="card">
-          <h2>Segment Analysis</h2>
-          <p class="subtitle">Timestamped breakdown of attention and engagement.</p>
-          <div class="segment-list" id="segment-list"></div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:16px">
-          <button class="btn btn-primary" onclick="showScreen('screen-dashboard')">← Back to Dashboard</button>
-          <button class="btn btn-ghost" onclick="showScreen('screen-setup')">New Project</button>
+
+        <!-- RIGHT: brain sim panel -->
+        <div class="brain-panel">
+          <h3>🧠 Brain Simulation</h3>
+          <p class="subtitle">TRIBE v2 pipeline · real-time</p>
+          <div id="brain-model-badge" class="brain-model-badge">GPT-4o Brain Sim</div>
+          <div class="brain-canvas-wrap">
+            <canvas id="brain-canvas" width="280" height="80" style="width:100%;border-radius:6px;background:#0a0a0f"></canvas>
+          </div>
+          <div class="stage-list" id="stage-list">
+            <div class="stage-item active">
+              <span class="stage-icon">⏳</span>
+              <div><div class="stage-label">Waiting for video…</div></div>
+            </div>
+          </div>
+          <div id="brain-attention-summary" style="margin-top:12px;display:none">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Mean Attention</div>
+            <div style="font-size:28px;font-weight:700" id="brain-mean-attention">—</div>
+            <div class="progress-bar-wrap" style="margin-top:6px"><div class="progress-bar-fill" id="brain-attention-bar" style="width:0%"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -912,25 +952,145 @@ async function submitYouTube() {
   }
 }
 
+// ── Brain canvas animation ─────────────────────────────────────────────────
+
+let _brainWaveFrame = null;
+let _brainAttentionScores = [];
+let _brainWavePhase = 0;
+
+function startBrainWave() {
+  const canvas = document.getElementById('brain-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  function draw() {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const numWaves = 3;
+    const colors = ['rgba(124,58,237,0.8)', 'rgba(167,139,250,0.5)', 'rgba(124,58,237,0.3)'];
+    const baseAmplitude = _brainAttentionScores.length
+      ? Math.max(..._brainAttentionScores.slice(-3)) * 28 + 8
+      : 14;
+
+    for (let w = 0; w < numWaves; w++) {
+      ctx.beginPath();
+      ctx.strokeStyle = colors[w];
+      ctx.lineWidth = w === 0 ? 2 : 1;
+      const freq = 0.04 + w * 0.015;
+      const amp = baseAmplitude * (1 - w * 0.25);
+      const phase = _brainWavePhase * (1 + w * 0.3);
+      for (let x = 0; x <= W; x++) {
+        const y = H / 2 + Math.sin(x * freq + phase) * amp
+                        + Math.sin(x * freq * 2.3 + phase * 1.5) * (amp * 0.4);
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Faint grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y <= H; y += H / 4) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    _brainWavePhase += 0.06;
+    _brainWaveFrame = requestAnimationFrame(draw);
+  }
+  if (_brainWaveFrame) cancelAnimationFrame(_brainWaveFrame);
+  draw();
+}
+
+function stopBrainWave() {
+  if (_brainWaveFrame) { cancelAnimationFrame(_brainWaveFrame); _brainWaveFrame = null; }
+}
+
+function renderStages(log) {
+  const list = document.getElementById('stage-list');
+  if (!list) return;
+
+  // Separate per-segment stages from top-level stages
+  const topStages = log.filter(s => !s.stage.startsWith('seg_'));
+  const segStages = log.filter(s => s.stage.startsWith('seg_'));
+
+  // Feed segment attention values into brain wave
+  _brainAttentionScores = segStages
+    .filter(s => s.done)
+    .map(s => parseFloat((s.detail || '').match(/[\d.]+%/)?.[ 0] || '65') / 100);
+
+  // Update mean attention display
+  if (_brainAttentionScores.length) {
+    const mean = _brainAttentionScores.reduce((a, b) => a + b, 0) / _brainAttentionScores.length;
+    const el = document.getElementById('brain-mean-attention');
+    const bar = document.getElementById('brain-attention-bar');
+    const wrap = document.getElementById('brain-attention-summary');
+    if (el) el.textContent = `${(mean * 100).toFixed(0)}%`;
+    if (bar) bar.style.width = `${mean * 100}%`;
+    if (wrap) wrap.style.display = 'block';
+  }
+
+  // Render top-level stages
+  let html = topStages.map(s => {
+    const icon = s.done ? '✓' : (s.stage === 'error' ? '✗' : '⟳');
+    const cls = s.done ? 'done' : 'active';
+    return `<div class="stage-item ${cls}">
+      <span class="stage-icon" style="color:${s.done ? 'var(--success)' : s.stage === 'error' ? 'var(--danger)' : 'var(--accent-light)'}">${icon}</span>
+      <div><div class="stage-label">${s.label}</div>${s.detail ? `<div class="stage-detail">${s.detail}</div>` : ''}</div>
+    </div>`;
+  }).join('');
+
+  // Collapsible segment block
+  if (segStages.length) {
+    const doneSegs = segStages.filter(s => s.done).length;
+    html += `<div class="stage-item" style="cursor:pointer" onclick="this.nextSibling.style.display=this.nextSibling.style.display==='none'?'block':'none'">
+      <span class="stage-icon" style="color:var(--accent-light)">▸</span>
+      <div><div class="stage-label">Segment analysis (${doneSegs}/${segStages.length})</div>
+      <div class="stage-detail">Click to expand</div></div>
+    </div>
+    <div style="display:none;margin-left:8px">
+    ${segStages.map(s => `<div class="stage-item ${s.done ? 'done' : 'active'}" style="font-size:11px;padding:4px 8px">
+      <span class="stage-icon" style="color:${s.done?'var(--success)':'var(--accent-light)'};font-size:10px">${s.done?'✓':'⟳'}</span>
+      <div><div class="stage-label">${s.label}</div>${s.detail ? `<div class="stage-detail">${s.detail}</div>` : ''}</div>
+    </div>`).join('')}
+    </div>`;
+  }
+
+  list.innerHTML = html || '<div class="stage-item"><span class="stage-icon">⏳</span><div class="stage-label">Initialising…</div></div>';
+}
+
 // ── Review Results ─────────────────────────────────────────────────────────
 
 async function pollReview() {
   document.getElementById('results-loading').style.display = 'flex';
   document.getElementById('results-content').style.display = 'none';
+  _brainAttentionScores = [];
+  startBrainWave();
 
   const poll = async () => {
     try {
-      const status = await apiFetch(`/projects/${currentProjectId}/review/${activeReviewId}/status`);
-      if (status.status === 'complete') {
+      const prog = await apiFetch(`/projects/${currentProjectId}/review/${activeReviewId}/progress`);
+
+      // Update brain panel regardless of status
+      if (prog.processing_log) renderStages(prog.processing_log);
+      if (prog.tribe_used !== undefined) {
+        const badge = document.getElementById('brain-model-badge');
+        if (badge) badge.textContent = prog.tribe_used ? 'TRIBE v2 (fMRI)' : 'GPT-4o Brain Sim';
+      }
+
+      if (prog.status === 'complete') {
         const review = await apiFetch(`/projects/${currentProjectId}/review/${activeReviewId}`);
+        stopBrainWave();
         renderResults(review);
-      } else if (status.status === 'failed') {
+      } else if (prog.status === 'failed') {
+        stopBrainWave();
         document.getElementById('results-loading').innerHTML = '<div class="alert alert-error">Review failed. Please try again.</div>';
       } else {
-        setTimeout(poll, 5000);
+        setTimeout(poll, 2000);
       }
     } catch (err) {
-      setTimeout(poll, 8000);
+      setTimeout(poll, 4000);
     }
   };
   poll();
