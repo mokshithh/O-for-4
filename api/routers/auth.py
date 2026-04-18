@@ -14,16 +14,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
     try:
         client = get_supabase_admin()
-        res = client.auth.admin.create_user({
+        res = client.auth.sign_up({
             "email": body.email,
             "password": body.password,
-            "email_confirm": True,
-            "user_metadata": {"display_name": body.display_name or ""},
+            "options": {"data": {"display_name": body.display_name or ""}},
         })
         if not res.user:
             raise HTTPException(status_code=400, detail="Signup failed")
 
-        # Sign in immediately to get a session token
+        # Auto-confirm is on — sign in immediately
         session_res = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
         if not session_res.session:
             raise HTTPException(status_code=400, detail="Signup succeeded but login failed")
