@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+*.db
+temp_uploads/
+brain/tribe_v2/
+*.pth
+*.pt
+node_modules/
+.venv/
+venv/
+.DS_Store
