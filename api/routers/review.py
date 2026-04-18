@@ -1,9 +1,9 @@
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
-from core.database import get_db
+from core.database import get_db, SessionLocal
 from core.security import get_current_user
 from core.config import settings
 from models.user import User
@@ -53,7 +53,18 @@ async def upload_video(
     db.commit()
     db.refresh(review)
 
-    background_tasks.add_task(review_service.process_review, review, temp_path, db)
+    review_id = review.id
+
+    async def _run_upload_review():
+        bg_db = SessionLocal()
+        try:
+            bg_review = bg_db.query(VideoReview).filter(VideoReview.id == review_id).first()
+            if bg_review:
+                await review_service.process_review(bg_review, temp_path, bg_db)
+        finally:
+            bg_db.close()
+
+    background_tasks.add_task(_run_upload_review)
 
     return ReviewStatusResponse(
         id=review.id,
@@ -87,14 +98,26 @@ async def submit_youtube(
     db.commit()
     db.refresh(review)
 
+    yt_review_id = review.id
+    yt_url = body.youtube_url
+
     async def _download_and_process():
+        bg_db = SessionLocal()
         try:
-            temp_path = video_service.fetch_youtube(body.youtube_url)
-            await review_service.process_review(review, temp_path, db)
+            bg_review = bg_db.query(VideoReview).filter(VideoReview.id == yt_review_id).first()
+            if not bg_review:
+                return
+            temp_path = video_service.fetch_youtube(yt_url)
+            await review_service.process_review(bg_review, temp_path, bg_db)
         except Exception as exc:
-            review.status = ReviewStatus.failed
-            review.error_message = str(exc)
-            db.commit()
+            try:
+                bg_review.status = ReviewStatus.failed
+                bg_review.error_message = str(exc)
+                bg_db.commit()
+            except Exception:
+                pass
+        finally:
+            bg_db.close()
 
     background_tasks.add_task(_download_and_process)
 
@@ -149,7 +172,12 @@ def get_review(
     current_user: User = Depends(get_current_user),
 ):
     _get_project(project_id, current_user.id, db)
-    review = db.query(VideoReview).filter(VideoReview.id == review_id, VideoReview.project_id == project_id).first()
+    review = (
+        db.query(VideoReview)
+        .options(joinedload(VideoReview.segments))
+        .filter(VideoReview.id == review_id, VideoReview.project_id == project_id)
+        .first()
+    )
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.status != ReviewStatus.complete:
@@ -164,5 +192,11 @@ def list_reviews(
     current_user: User = Depends(get_current_user),
 ):
     _get_project(project_id, current_user.id, db)
-    reviews = db.query(VideoReview).filter(VideoReview.project_id == project_id).order_by(VideoReview.created_at.desc()).all()
+    reviews = (
+        db.query(VideoReview)
+        .options(joinedload(VideoReview.segments))
+        .filter(VideoReview.project_id == project_id)
+        .order_by(VideoReview.created_at.desc())
+        .all()
+    )
     return [ReviewResponse.model_validate(r) for r in reviews]

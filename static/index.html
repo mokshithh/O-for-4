@@ -122,16 +122,27 @@
     /* Brain sim panel */
     .brain-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: sticky; top: 20px; }
     .brain-panel h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--accent-light); }
-    .brain-panel .subtitle { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
-    .brain-canvas-wrap { margin-bottom: 14px; }
-    .stage-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
-    .stage-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; padding: 6px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); transition: border-color 0.2s; }
-    .stage-item.active { border-color: var(--accent); }
+    .brain-panel .subtitle { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .brain-canvas-wrap { margin-bottom: 10px; position: relative; }
+    .brain-canvas-wrap canvas { display: block; border-radius: 8px; }
+    .stage-list { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
+    .stage-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; padding: 5px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); transition: border-color 0.2s; }
+    .stage-item.active { border-color: var(--accent); background: #1a0d2e; }
     .stage-item.done { border-color: #1a3a1a; }
-    .stage-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    .stage-icon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
     .stage-label { font-weight: 600; color: var(--text); }
-    .stage-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .brain-model-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #1a0d2e; color: var(--accent-light); font-weight: 600; display: inline-block; margin-bottom: 10px; }
+    .stage-detail { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .brain-model-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #1a0d2e; color: var(--accent-light); font-weight: 600; display: inline-block; margin-bottom: 8px; }
+    /* Region legend */
+    .brain-legend { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; margin-bottom: 10px; }
+    .brain-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); }
+    .brain-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    /* Attention timeline */
+    .attention-timeline { margin-top: 10px; }
+    .attention-timeline-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; margin-bottom: 4px; }
+    .timeline-bars { display: flex; gap: 2px; align-items: flex-end; height: 36px; }
+    .timeline-bar { flex: 1; border-radius: 2px 2px 0 0; transition: height 0.4s, background 0.4s; min-height: 3px; cursor: default; position: relative; }
+    .timeline-bar:hover::after { content: attr(data-label); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a0d2e; color: var(--accent-light); font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 10; margin-bottom: 4px; }
 
     /* Feedback */
     .coaching-box { background: #1a0d2e; border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
@@ -338,7 +349,7 @@
         <p class="subtitle">Pick the idea that resonates most. We'll tailor the script around your angle.</p>
         <div id="ideas-loading" class="loading"><div class="spinner"></div>Generating ideas…</div>
         <div id="ideas-grid" class="ideas-grid" style="display:none"></div>
-        <div style="display:flex;gap:12px;margin-top:16px" id="ideas-actions" style="display:none">
+        <div style="display:none;gap:12px;margin-top:16px" id="ideas-actions">
           <button class="btn btn-ghost" onclick="showScreen('screen-setup')">← Back</button>
           <button class="btn btn-primary" id="btn-select-idea" onclick="selectIdea()" disabled>Next: Personalize →</button>
         </div>
@@ -390,7 +401,7 @@
           </div>
           <div id="script-text" class="script-box"></div>
           <textarea id="script-edit-area" class="script-edit" style="display:none"></textarea>
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap" id="script-edit-actions" style="display:none">
+          <div style="display:none;gap:8px;margin-top:12px;flex-wrap:wrap" id="script-edit-actions">
             <button class="btn btn-primary" onclick="saveEdit()">Save Edits</button>
             <div style="flex:1;min-width:200px">
               <input type="text" id="revision-input" placeholder="Revision instructions…" class="field input" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:10px;width:100%;font-size:13px;outline:none" />
@@ -498,21 +509,33 @@
         <!-- RIGHT: brain sim panel -->
         <div class="brain-panel">
           <h3>🧠 Brain Simulation</h3>
-          <p class="subtitle">TRIBE v2 pipeline · real-time</p>
+          <p class="subtitle">TRIBE v2 cortical activity · real-time</p>
           <div id="brain-model-badge" class="brain-model-badge">GPT-4o Brain Sim</div>
           <div class="brain-canvas-wrap">
-            <canvas id="brain-canvas" width="280" height="80" style="width:100%;border-radius:6px;background:#0a0a0f"></canvas>
+            <canvas id="brain-canvas" width="280" height="160" style="width:100%;background:#060610;border-radius:8px"></canvas>
           </div>
-          <div class="stage-list" id="stage-list">
+          <div class="brain-legend" id="brain-legend">
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#ef4444"></div>Low</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#f59e0b"></div>Med</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#22c55e"></div>High</div>
+            <div class="brain-legend-item" style="margin-left:auto"><span id="brain-scan-status" style="color:var(--accent-light);font-size:10px;font-weight:600">SCANNING…</span></div>
+          </div>
+          <div class="attention-timeline" id="attention-timeline" style="display:none">
+            <div class="attention-timeline-label">Segment Attention</div>
+            <div class="timeline-bars" id="timeline-bars"></div>
+          </div>
+          <div class="stage-list" id="stage-list" style="margin-top:10px">
             <div class="stage-item active">
               <span class="stage-icon">⏳</span>
               <div><div class="stage-label">Waiting for video…</div></div>
             </div>
           </div>
-          <div id="brain-attention-summary" style="margin-top:12px;display:none">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Mean Attention</div>
-            <div style="font-size:28px;font-weight:700" id="brain-mean-attention">—</div>
-            <div class="progress-bar-wrap" style="margin-top:6px"><div class="progress-bar-fill" id="brain-attention-bar" style="width:0%"></div></div>
+          <div id="brain-attention-summary" style="margin-top:10px;display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Mean Attention</div>
+              <div style="font-size:22px;font-weight:700" id="brain-mean-attention">—</div>
+            </div>
+            <div class="progress-bar-wrap" style="margin-top:4px"><div class="progress-bar-fill" id="brain-attention-bar" style="width:0%"></div></div>
           </div>
         </div>
       </div>
@@ -952,11 +975,40 @@ async function submitYouTube() {
   }
 }
 
-// ── Brain canvas animation ─────────────────────────────────────────────────
+// ── Brain heatmap visualization ────────────────────────────────────────────
 
 let _brainWaveFrame = null;
 let _brainAttentionScores = [];
-let _brainWavePhase = 0;
+let _brainPhase = 0;
+let _brainRegions = [];  // [{x,y,r,label,activation}]
+let _brainScanY = 0;
+
+// Brain region layout (normalized 0-1 coords, will be scaled to canvas)
+const BRAIN_REGIONS_DEF = [
+  { nx: 0.50, ny: 0.18, nr: 0.095, label: 'Prefrontal' },   // top center
+  { nx: 0.28, ny: 0.28, nr: 0.085, label: 'L-Frontal' },
+  { nx: 0.72, ny: 0.28, nr: 0.085, label: 'R-Frontal' },
+  { nx: 0.18, ny: 0.50, nr: 0.080, label: 'L-Temporal' },
+  { nx: 0.82, ny: 0.50, nr: 0.080, label: 'R-Temporal' },
+  { nx: 0.38, ny: 0.48, nr: 0.078, label: 'L-Parietal' },
+  { nx: 0.62, ny: 0.48, nr: 0.078, label: 'R-Parietal' },
+  { nx: 0.50, ny: 0.65, nr: 0.075, label: 'Limbic' },
+  { nx: 0.32, ny: 0.72, nr: 0.072, label: 'L-Occipital' },
+  { nx: 0.68, ny: 0.72, nr: 0.072, label: 'R-Occipital' },
+  { nx: 0.50, ny: 0.82, nr: 0.065, label: 'Cerebellum' },
+];
+
+function _attentionToColor(activation, alpha = 1.0) {
+  // low=red, mid=yellow, high=green (brain heatmap style)
+  const a = Math.max(0, Math.min(1, activation));
+  if (a < 0.5) {
+    const t = a * 2;
+    return `rgba(${Math.round(239-80*t)},${Math.round(68+100*t)},${Math.round(68*t)},${alpha})`;
+  } else {
+    const t = (a - 0.5) * 2;
+    return `rgba(${Math.round(159-137*t)},${Math.round(168+87*t)},${Math.round(68*t)},${alpha})`;
+  }
+}
 
 function startBrainWave() {
   const canvas = document.getElementById('brain-canvas');
@@ -964,39 +1016,88 @@ function startBrainWave() {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
+  // Initialize region activations
+  _brainRegions = BRAIN_REGIONS_DEF.map(d => ({
+    ...d,
+    x: d.nx * W, y: d.ny * H, r: d.nr * Math.min(W, H),
+    activation: 0.5 + (Math.random() - 0.5) * 0.3,
+    targetActivation: 0.5,
+    pulsePhase: Math.random() * Math.PI * 2,
+  }));
+
+  _brainScanY = 0;
+
   function draw() {
-    ctx.fillStyle = '#0a0a0f';
+    ctx.fillStyle = '#060610';
     ctx.fillRect(0, 0, W, H);
 
-    const numWaves = 3;
-    const colors = ['rgba(124,58,237,0.8)', 'rgba(167,139,250,0.5)', 'rgba(124,58,237,0.3)'];
-    const baseAmplitude = _brainAttentionScores.length
-      ? Math.max(..._brainAttentionScores.slice(-3)) * 28 + 8
-      : 14;
+    // Brain outline (ellipse)
+    ctx.beginPath();
+    ctx.ellipse(W/2, H*0.46, W*0.42, H*0.44, 0, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(124,58,237,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    for (let w = 0; w < numWaves; w++) {
-      ctx.beginPath();
-      ctx.strokeStyle = colors[w];
-      ctx.lineWidth = w === 0 ? 2 : 1;
-      const freq = 0.04 + w * 0.015;
-      const amp = baseAmplitude * (1 - w * 0.25);
-      const phase = _brainWavePhase * (1 + w * 0.3);
-      for (let x = 0; x <= W; x++) {
-        const y = H / 2 + Math.sin(x * freq + phase) * amp
-                        + Math.sin(x * freq * 2.3 + phase * 1.5) * (amp * 0.4);
-        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    // Faint grid lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    // Inner brain detail lines
+    ctx.strokeStyle = 'rgba(124,58,237,0.08)';
     ctx.lineWidth = 1;
-    for (let y = 0; y <= H; y += H / 4) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
+    ctx.beginPath(); ctx.ellipse(W/2, H*0.46, W*0.28, H*0.30, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2, H*0.04); ctx.lineTo(W/2, H*0.88); ctx.stroke();
 
-    _brainWavePhase += 0.06;
+    // Draw regions with glow
+    const meanAtt = _brainAttentionScores.length
+      ? _brainAttentionScores.reduce((a,b)=>a+b,0)/_brainAttentionScores.length : 0.5;
+
+    _brainRegions.forEach((reg, i) => {
+      // Smoothly interpolate activation towards target
+      const scoreIdx = i % Math.max(_brainAttentionScores.length, 1);
+      const score = _brainAttentionScores.length ? _brainAttentionScores[scoreIdx] : meanAtt;
+      reg.targetActivation = score * (0.6 + 0.4 * Math.sin(reg.pulsePhase + _brainPhase * (0.5 + i*0.07)));
+      reg.activation += (reg.targetActivation - reg.activation) * 0.08;
+
+      const act = reg.activation;
+      const pulse = 1 + 0.12 * Math.sin(_brainPhase * (1.2 + i*0.15) + reg.pulsePhase);
+      const r = reg.r * pulse;
+
+      // Glow
+      const grd = ctx.createRadialGradient(reg.x, reg.y, 0, reg.x, reg.y, r * 2.2);
+      grd.addColorStop(0, _attentionToColor(act, 0.55));
+      grd.addColorStop(0.5, _attentionToColor(act, 0.25));
+      grd.addColorStop(1, _attentionToColor(act, 0));
+      ctx.beginPath(); ctx.arc(reg.x, reg.y, r * 2.2, 0, Math.PI*2);
+      ctx.fillStyle = grd; ctx.fill();
+
+      // Core
+      const coreGrd = ctx.createRadialGradient(reg.x, reg.y, 0, reg.x, reg.y, r);
+      coreGrd.addColorStop(0, _attentionToColor(act, 0.9));
+      coreGrd.addColorStop(0.6, _attentionToColor(act, 0.6));
+      coreGrd.addColorStop(1, _attentionToColor(act, 0.1));
+      ctx.beginPath(); ctx.arc(reg.x, reg.y, r, 0, Math.PI*2);
+      ctx.fillStyle = coreGrd; ctx.fill();
+    });
+
+    // Scan line
+    const scanColor = `rgba(167,139,250,${0.35 + 0.2*Math.sin(_brainPhase*3)})`;
+    ctx.strokeStyle = scanColor;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, _brainScanY); ctx.lineTo(W, _brainScanY); ctx.stroke();
+    ctx.setLineDash([]);
+    _brainScanY = (_brainScanY + 1.2) % H;
+
+    // Connection lines between nearby regions (neural connections)
+    ctx.strokeStyle = 'rgba(124,58,237,0.12)';
+    ctx.lineWidth = 0.8;
+    const connections = [[0,1],[0,2],[1,3],[2,4],[1,5],[2,6],[5,7],[6,7],[3,7],[4,7],[7,8],[7,9],[8,10],[9,10]];
+    connections.forEach(([a,b]) => {
+      const ra = _brainRegions[a], rb = _brainRegions[b];
+      const combined = (ra.activation + rb.activation) / 2;
+      ctx.strokeStyle = _attentionToColor(combined, 0.18 + combined*0.18);
+      ctx.lineWidth = 0.8 + combined * 0.8;
+      ctx.beginPath(); ctx.moveTo(ra.x, ra.y); ctx.lineTo(rb.x, rb.y); ctx.stroke();
+    });
+
+    _brainPhase += 0.04;
     _brainWaveFrame = requestAnimationFrame(draw);
   }
   if (_brainWaveFrame) cancelAnimationFrame(_brainWaveFrame);
@@ -1005,6 +1106,14 @@ function startBrainWave() {
 
 function stopBrainWave() {
   if (_brainWaveFrame) { cancelAnimationFrame(_brainWaveFrame); _brainWaveFrame = null; }
+  const el = document.getElementById('brain-scan-status');
+  if (el) el.textContent = 'COMPLETE';
+}
+
+function _attentionColor(score) {
+  if (score >= 0.7) return 'var(--success)';
+  if (score >= 0.45) return 'var(--warning)';
+  return 'var(--danger)';
 }
 
 function renderStages(log) {
@@ -1015,10 +1124,13 @@ function renderStages(log) {
   const topStages = log.filter(s => !s.stage.startsWith('seg_'));
   const segStages = log.filter(s => s.stage.startsWith('seg_'));
 
-  // Feed segment attention values into brain wave
+  // Parse attention scores from seg detail strings like "Attention 72%"
   _brainAttentionScores = segStages
     .filter(s => s.done)
-    .map(s => parseFloat((s.detail || '').match(/[\d.]+%/)?.[ 0] || '65') / 100);
+    .map(s => {
+      const m = (s.detail || '').match(/(\d+(?:\.\d+)?)%/);
+      return m ? parseFloat(m[1]) / 100 : 0.65;
+    });
 
   // Update mean attention display
   if (_brainAttentionScores.length) {
@@ -1026,17 +1138,32 @@ function renderStages(log) {
     const el = document.getElementById('brain-mean-attention');
     const bar = document.getElementById('brain-attention-bar');
     const wrap = document.getElementById('brain-attention-summary');
-    if (el) el.textContent = `${(mean * 100).toFixed(0)}%`;
-    if (bar) bar.style.width = `${mean * 100}%`;
+    if (el) { el.textContent = `${(mean * 100).toFixed(0)}%`; el.style.color = _attentionColor(mean); }
+    if (bar) { bar.style.width = `${mean * 100}%`; bar.style.background = _attentionColor(mean); }
     if (wrap) wrap.style.display = 'block';
+
+    // Update attention timeline bars
+    const timeline = document.getElementById('attention-timeline');
+    const barsEl = document.getElementById('timeline-bars');
+    if (timeline && barsEl) {
+      timeline.style.display = 'block';
+      barsEl.innerHTML = _brainAttentionScores.map((sc, i) => {
+        const segStage = segStages[i];
+        const label = segStage ? segStage.label.replace('Analysed: ', '') : `Seg ${i+1}`;
+        const pct = Math.round(sc * 100);
+        const color = sc >= 0.7 ? '#22c55e' : sc >= 0.45 ? '#f59e0b' : '#ef4444';
+        return `<div class="timeline-bar" style="height:${Math.max(8, sc*36)}px;background:${color};opacity:0.8" data-label="${label}: ${pct}%"></div>`;
+      }).join('');
+    }
   }
 
   // Render top-level stages
   let html = topStages.map(s => {
     const icon = s.done ? '✓' : (s.stage === 'error' ? '✗' : '⟳');
     const cls = s.done ? 'done' : 'active';
+    const iconColor = s.done ? 'var(--success)' : s.stage === 'error' ? 'var(--danger)' : 'var(--accent-light)';
     return `<div class="stage-item ${cls}">
-      <span class="stage-icon" style="color:${s.done ? 'var(--success)' : s.stage === 'error' ? 'var(--danger)' : 'var(--accent-light)'}">${icon}</span>
+      <span class="stage-icon" style="color:${iconColor}">${icon}</span>
       <div><div class="stage-label">${s.label}</div>${s.detail ? `<div class="stage-detail">${s.detail}</div>` : ''}</div>
     </div>`;
   }).join('');
@@ -1044,20 +1171,26 @@ function renderStages(log) {
   // Collapsible segment block
   if (segStages.length) {
     const doneSegs = segStages.filter(s => s.done).length;
-    html += `<div class="stage-item" style="cursor:pointer" onclick="this.nextSibling.style.display=this.nextSibling.style.display==='none'?'block':'none'">
+    const id = 'seg-expand-' + Date.now();
+    html += `<div class="stage-item" style="cursor:pointer" onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'block':'none'">
       <span class="stage-icon" style="color:var(--accent-light)">▸</span>
-      <div><div class="stage-label">Segment analysis (${doneSegs}/${segStages.length})</div>
+      <div><div class="stage-label">Segments analysed (${doneSegs}/${segStages.length})</div>
       <div class="stage-detail">Click to expand</div></div>
     </div>
-    <div style="display:none;margin-left:8px">
-    ${segStages.map(s => `<div class="stage-item ${s.done ? 'done' : 'active'}" style="font-size:11px;padding:4px 8px">
-      <span class="stage-icon" style="color:${s.done?'var(--success)':'var(--accent-light)'};font-size:10px">${s.done?'✓':'⟳'}</span>
-      <div><div class="stage-label">${s.label}</div>${s.detail ? `<div class="stage-detail">${s.detail}</div>` : ''}</div>
-    </div>`).join('')}
+    <div id="${id}" style="display:none;margin-left:8px;margin-top:4px;display:flex;flex-direction:column;gap:3px">
+    ${segStages.map(s => {
+      const m = (s.detail || '').match(/(\d+(?:\.\d+)?)%/);
+      const sc = m ? parseFloat(m[1])/100 : 0.65;
+      const col = _attentionColor(sc);
+      return `<div class="stage-item ${s.done ? 'done' : 'active'}" style="padding:3px 8px">
+        <span class="stage-icon" style="color:${s.done?col:'var(--accent-light)'};font-size:10px">${s.done?'✓':'⟳'}</span>
+        <div><div class="stage-label" style="font-size:11px">${s.label}</div>${s.detail ? `<div class="stage-detail">${s.detail}</div>` : ''}</div>
+      </div>`;
+    }).join('')}
     </div>`;
   }
 
-  list.innerHTML = html || '<div class="stage-item"><span class="stage-icon">⏳</span><div class="stage-label">Initialising…</div></div>';
+  list.innerHTML = html || '<div class="stage-item"><span class="stage-icon">⏳</span><div><div class="stage-label">Initialising…</div></div></div>';
 }
 
 // ── Review Results ─────────────────────────────────────────────────────────
@@ -1150,20 +1283,39 @@ function renderResults(review) {
 
   // Segments
   const segs = review.segments || [];
-  document.getElementById('segment-list').innerHTML = segs.length ? segs.map(seg => `
-    <div class="segment-item ${seg.is_weak ? 'weak' : ''}">
-      <div class="seg-header">
-        <span class="seg-label">${seg.label}</span>
-        <span class="seg-time">${formatTime(seg.start_seconds)} – ${formatTime(seg.end_seconds)}</span>
-      </div>
-      <div style="display:flex;gap:16px;font-size:12px">
-        <span>Engagement: <strong class="${scoreClass(seg.engagement_score || 0)}">${(seg.engagement_score || 0).toFixed(0)}</strong></span>
-        <span>Retention Risk: <strong>${((seg.retention_risk || 0) * 100).toFixed(0)}%</strong></span>
-      </div>
-      ${seg.transcript_excerpt ? `<div class="seg-note muted">${seg.transcript_excerpt.substring(0, 120)}…</div>` : ''}
-      ${seg.coaching_note ? `<div class="seg-note" style="color:var(--warning);margin-top:4px">⚑ ${seg.coaching_note}</div>` : ''}
-    </div>
-  `).join('') : '<div class="muted">No segment data available.</div>';
+  if (segs.length) {
+    // Sort by segment_index
+    segs.sort((a, b) => a.segment_index - b.segment_index);
+    document.getElementById('segment-list').innerHTML = segs.map(seg => {
+      const att = seg.attention_continuity != null ? seg.attention_continuity : (seg.engagement_score || 0) / 100;
+      const attPct = Math.round(att * 100);
+      const attColor = att >= 0.7 ? 'var(--success)' : att >= 0.45 ? 'var(--warning)' : 'var(--danger)';
+      const barW = Math.max(4, attPct);
+      return `
+      <div class="segment-item ${seg.is_weak ? 'weak' : ''}">
+        <div class="seg-header">
+          <span class="seg-label">${seg.label}${seg.is_weak ? ' <span style="color:var(--danger);font-size:11px">⚠ WEAK</span>' : ''}</span>
+          <span class="seg-time">${formatTime(seg.start_seconds)} – ${formatTime(seg.end_seconds)}</span>
+        </div>
+        <div style="margin:6px 0 4px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px">
+            <span>Attention Continuity</span><span style="color:${attColor};font-weight:700">${attPct}%</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:${attColor};border-radius:3px;transition:width .4s"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;margin-bottom:4px">
+          <span>Engagement: <strong class="${scoreClass(seg.engagement_score || 0)}">${(seg.engagement_score || 0).toFixed(0)}</strong></span>
+          <span>Drop Risk: <strong style="color:${(seg.retention_risk||0)>0.5?'var(--danger)':'var(--muted)'}">${((seg.retention_risk || 0) * 100).toFixed(0)}%</strong></span>
+        </div>
+        ${seg.transcript_excerpt ? `<div class="seg-note muted" style="font-style:italic">"${seg.transcript_excerpt.substring(0, 130)}…"</div>` : ''}
+        ${seg.coaching_note ? `<div class="seg-note" style="color:var(--warning);margin-top:6px;font-weight:500">⚑ ${seg.coaching_note}</div>` : ''}
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('segment-list').innerHTML = '<div class="muted" style="padding:12px 0;text-align:center">No segment data available.</div>';
+  }
 
   document.getElementById('results-content').style.display = 'block';
 }
