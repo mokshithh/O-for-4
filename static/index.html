@@ -42,12 +42,22 @@
     /* Forms */
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .field input, .field select, .field textarea {
+    .field input, .field textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
       color: var(--text); padding: 10px 12px; font-size: 14px; outline: none; transition: border-color 0.15s;
     }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
     .field textarea { min-height: 100px; resize: vertical; }
+
+    /* Bubble selectors */
+    .bubble-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .bubble {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .bubble:hover { border-color: var(--accent-light); color: var(--text); }
+    .bubble.selected { background: #2d1b69; border-color: var(--accent); color: var(--accent-light); font-weight: 600; }
 
     /* Buttons */
     .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; border: none; transition: opacity 0.15s; }
@@ -201,70 +211,98 @@
         <h2>Creator Setup</h2>
         <p class="subtitle">Tell us about your channel so we can recommend the right ideas.</p>
         <div id="setup-error" class="alert alert-error" style="display:none"></div>
-        <form onsubmit="submitSetup(event)">
-          <div class="field">
-            <label>YouTube channel URL</label>
-            <input type="url" id="s-channel" placeholder="https://youtube.com/@yourhandle" required />
+
+        <div class="field">
+          <label>YouTube channel URL</label>
+          <input type="url" id="s-channel" placeholder="https://youtube.com/@yourhandle" />
+        </div>
+
+        <div class="field">
+          <label>Your niche</label>
+          <div class="bubble-group" id="bubbles-niche">
+            <div class="bubble" onclick="selectBubble('niche',this,'Personal Finance')">Personal Finance</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Fitness & Health')">Fitness & Health</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Tech & Gadgets')">Tech & Gadgets</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Business & Entrepreneurship')">Business & Entrepreneurship</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Gaming')">Gaming</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Education & Learning')">Education & Learning</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Lifestyle & Vlogs')">Lifestyle & Vlogs</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Cooking & Food')">Cooking & Food</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Travel')">Travel</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Self Improvement')">Self Improvement</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'True Crime')">True Crime</div>
+            <div class="bubble" onclick="selectBubble('niche',this,'Science & Nature')">Science & Nature</div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="field">
-              <label>Niche</label>
-              <input type="text" id="s-niche" placeholder="e.g. personal finance, fitness" required />
-            </div>
-            <div class="field">
-              <label>Target audience</label>
-              <input type="text" id="s-audience" placeholder="e.g. 25-35 year olds in debt" required />
-            </div>
-            <div class="field">
-              <label>Tone</label>
-              <select id="s-tone" required>
-                <option value="">Select tone</option>
-                <option>Casual and conversational</option>
-                <option>Educational and structured</option>
-                <option>Opinion-led and direct</option>
-                <option>Story-driven</option>
-                <option>Motivational and energetic</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Video style</label>
-              <select id="s-style" required>
-                <option value="">Select style</option>
-                <option>Talking head</option>
-                <option>Vlog / lifestyle</option>
-                <option>Tutorial / how-to</option>
-                <option>Explainer / essay</option>
-                <option>Challenge / reaction</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Goal</label>
-              <select id="s-goal" required>
-                <option value="">Select goal</option>
-                <option>Grow subscribers</option>
-                <option>Build authority in niche</option>
-                <option>Drive traffic to product/service</option>
-                <option>Entertain and build community</option>
-                <option>Educate and inform</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Intended duration</label>
-              <select id="s-duration" required>
-                <option value="">Select duration</option>
-                <option>5–10 minutes</option>
-                <option>10–15 minutes</option>
-                <option>15–20 minutes</option>
-                <option>20–30 minutes</option>
-                <option>30+ minutes</option>
-              </select>
-            </div>
+          <input type="text" id="s-niche-custom" placeholder="Or type your own niche…" style="margin-top:10px" oninput="customBubble('niche', this.value)" />
+        </div>
+
+        <div class="field">
+          <label>Target audience</label>
+          <div class="bubble-group" id="bubbles-audience">
+            <div class="bubble" onclick="selectBubble('audience',this,'Teenagers (13–17)')">Teenagers (13–17)</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Young adults (18–24)')">Young adults (18–24)</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Millennials (25–35)')">Millennials (25–35)</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Adults (35–50)')">Adults (35–50)</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Beginners in the niche')">Beginners in the niche</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Intermediate learners')">Intermediate learners</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Professionals & experts')">Professionals & experts</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Side hustlers')">Side hustlers</div>
+            <div class="bubble" onclick="selectBubble('audience',this,'Students')">Students</div>
           </div>
-          <div style="display:flex;gap:12px;margin-top:8px">
-            <button type="button" class="btn btn-ghost" onclick="showScreen('screen-dashboard')">← Back</button>
-            <button type="submit" class="btn btn-primary" id="setup-submit-btn">Generate Ideas →</button>
+          <input type="text" id="s-audience-custom" placeholder="Or describe your audience…" style="margin-top:10px" oninput="customBubble('audience', this.value)" />
+        </div>
+
+        <div class="field">
+          <label>Channel tone</label>
+          <div class="bubble-group" id="bubbles-tone">
+            <div class="bubble" onclick="selectBubble('tone',this,'Casual and conversational')">Casual &amp; conversational</div>
+            <div class="bubble" onclick="selectBubble('tone',this,'Educational and structured')">Educational &amp; structured</div>
+            <div class="bubble" onclick="selectBubble('tone',this,'Opinion-led and direct')">Opinion-led &amp; direct</div>
+            <div class="bubble" onclick="selectBubble('tone',this,'Story-driven')">Story-driven</div>
+            <div class="bubble" onclick="selectBubble('tone',this,'Motivational and energetic')">Motivational &amp; energetic</div>
+            <div class="bubble" onclick="selectBubble('tone',this,'Funny and entertaining')">Funny &amp; entertaining</div>
           </div>
-        </form>
+        </div>
+
+        <div class="field">
+          <label>Video style</label>
+          <div class="bubble-group" id="bubbles-style">
+            <div class="bubble" onclick="selectBubble('style',this,'Talking head')">Talking head</div>
+            <div class="bubble" onclick="selectBubble('style',this,'Vlog / lifestyle')">Vlog / lifestyle</div>
+            <div class="bubble" onclick="selectBubble('style',this,'Tutorial / how-to')">Tutorial / how-to</div>
+            <div class="bubble" onclick="selectBubble('style',this,'Explainer / essay')">Explainer / essay</div>
+            <div class="bubble" onclick="selectBubble('style',this,'Challenge / reaction')">Challenge / reaction</div>
+            <div class="bubble" onclick="selectBubble('style',this,'Documentary / deep dive')">Documentary / deep dive</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Main goal</label>
+          <div class="bubble-group" id="bubbles-goal">
+            <div class="bubble" onclick="selectBubble('goal',this,'Grow subscribers')">Grow subscribers</div>
+            <div class="bubble" onclick="selectBubble('goal',this,'Build authority in niche')">Build authority</div>
+            <div class="bubble" onclick="selectBubble('goal',this,'Drive traffic to product/service')">Drive traffic</div>
+            <div class="bubble" onclick="selectBubble('goal',this,'Entertain and build community')">Build community</div>
+            <div class="bubble" onclick="selectBubble('goal',this,'Educate and inform')">Educate &amp; inform</div>
+            <div class="bubble" onclick="selectBubble('goal',this,'Go viral')">Go viral</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Intended duration</label>
+          <div class="bubble-group" id="bubbles-duration">
+            <div class="bubble" onclick="selectBubble('duration',this,'5–10 minutes')">5–10 min</div>
+            <div class="bubble" onclick="selectBubble('duration',this,'10–15 minutes')">10–15 min</div>
+            <div class="bubble" onclick="selectBubble('duration',this,'15–20 minutes')">15–20 min</div>
+            <div class="bubble" onclick="selectBubble('duration',this,'20–30 minutes')">20–30 min</div>
+            <div class="bubble" onclick="selectBubble('duration',this,'30+ minutes')">30+ min</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="button" class="btn btn-ghost" onclick="showScreen('screen-dashboard')">← Back</button>
+          <button type="button" class="btn btn-primary" id="setup-submit-btn" onclick="submitSetup()">Generate Ideas →</button>
+        </div>
       </div>
     </div>
 
@@ -582,20 +620,57 @@ function openProject(id) {
   showScreen('screen-review-submit');
 }
 
+// ── Bubble selectors ───────────────────────────────────────────────────────
+
+const _bubbleSelections = {};
+
+function selectBubble(group, el, value) {
+  document.querySelectorAll(`#bubbles-${group} .bubble`).forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _bubbleSelections[group] = value;
+  // Clear custom input if a preset was clicked
+  const custom = document.getElementById(`s-${group}-custom`);
+  if (custom) custom.value = '';
+}
+
+function customBubble(group, value) {
+  // Deselect all preset bubbles when typing custom
+  document.querySelectorAll(`#bubbles-${group} .bubble`).forEach(b => b.classList.remove('selected'));
+  _bubbleSelections[group] = value;
+}
+
+function getBubble(group) {
+  return _bubbleSelections[group] || '';
+}
+
 // ── Setup ──────────────────────────────────────────────────────────────────
 
-async function submitSetup(e) {
-  e.preventDefault();
+async function submitSetup() {
   hideError('setup-error');
+
+  const niche = getBubble('niche');
+  const audience = getBubble('audience');
+  const tone = getBubble('tone');
+  const style = getBubble('style');
+  const goal = getBubble('goal');
+  const duration = getBubble('duration');
+
+  if (!niche) return showError('setup-error', 'Please select or enter your niche.');
+  if (!audience) return showError('setup-error', 'Please select your target audience.');
+  if (!tone) return showError('setup-error', 'Please select a channel tone.');
+  if (!style) return showError('setup-error', 'Please select a video style.');
+  if (!goal) return showError('setup-error', 'Please select your main goal.');
+  if (!duration) return showError('setup-error', 'Please select an intended duration.');
+
   setLoading('setup-submit-btn', true, 'Generate Ideas →');
   const body = {
-    channel_url: document.getElementById('s-channel').value,
-    niche: document.getElementById('s-niche').value,
-    tone: document.getElementById('s-tone').value,
-    target_audience: document.getElementById('s-audience').value,
-    goal: document.getElementById('s-goal').value,
-    video_style: document.getElementById('s-style').value,
-    intended_duration: document.getElementById('s-duration').value,
+    channel_url: document.getElementById('s-channel').value || 'https://youtube.com/',
+    niche,
+    tone,
+    target_audience: audience,
+    goal,
+    video_style: style,
+    intended_duration: duration,
   };
   try {
     const project = await apiFetch('/projects', { method: 'POST', body: JSON.stringify(body) });

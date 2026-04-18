@@ -1,23 +1,25 @@
-"""Thin wrapper around the Anthropic client with shared settings."""
-import anthropic
+"""AI chat client — uses OpenAI GPT-4o."""
+from openai import OpenAI
 from core.config import settings
 
-_client: anthropic.Anthropic | None = None
+_client: OpenAI | None = None
 
 
-def get_client() -> anthropic.Anthropic:
+def get_client() -> OpenAI:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        _client = OpenAI(api_key=settings.openai_api_key)
     return _client
 
 
 def chat(system: str, user: str, max_tokens: int = 2048) -> str:
     client = get_client()
-    message = client.messages.create(
-        model="claude-opus-4-7",
+    response = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
     )
-    return message.content[0].text
+    return response.choices[0].message.content
