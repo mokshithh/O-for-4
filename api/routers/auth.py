@@ -1,50 +1,74 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.security import hash_password, verify_password, create_access_token, get_current_user
-from models.user import User
+from core.security import get_current_user, get_supabase_admin
+from core.config import settings
 from schemas.auth import SignupRequest, LoginRequest, TokenResponse, UserProfile
+from models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=201)
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == body.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        client = get_supabase_admin()
+        res = client.auth.admin.create_user({
+            "email": body.email,
+            "password": body.password,
+            "email_confirm": True,
+            "user_metadata": {"display_name": body.display_name or ""},
+        })
+        if not res.user:
+            raise HTTPException(status_code=400, detail="Signup failed")
 
-    user = User(
-        email=body.email,
-        hashed_password=hash_password(body.password),
-        display_name=body.display_name,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        # Sign in immediately to get a session token
+        session_res = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
+        if not session_res.session:
+            raise HTTPException(status_code=400, detail="Signup succeeded but login failed")
 
-    token = create_access_token({"sub": user.id})
-    return TokenResponse(
-        access_token=token,
-        user_id=user.id,
-        email=user.email,
-        display_name=user.display_name,
-    )
+        uid = res.user.id
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            user = User(id=uid, email=body.email, hashed_password="supabase_managed", display_name=body.display_name)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        return TokenResponse(
+            access_token=session_res.session.access_token,
+            user_id=uid,
+            email=body.email,
+            display_name=body.display_name,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        msg = str(exc)
+        if "already registered" in msg.lower() or "already been registered" in msg.lower():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail=msg)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email).first()
-    if not user or not verify_password(body.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+def login(body: LoginRequest):
+    try:
+        client = get_supabase_admin()
+        res = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
+        if not res.session:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"sub": user.id})
-    return TokenResponse(
-        access_token=token,
-        user_id=user.id,
-        email=user.email,
-        display_name=user.display_name,
-    )
+        return TokenResponse(
+            access_token=res.session.access_token,
+            user_id=res.user.id,
+            email=res.user.email,
+            display_name=res.user.user_metadata.get("display_name"),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @router.get("/me", response_model=UserProfile)

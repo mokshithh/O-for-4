@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     environment: str = "development"
     max_upload_size_mb: int = 500
 
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
+
     class Config:
         env_file = ".env"
 
