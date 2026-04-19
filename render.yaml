@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: placeholdr
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:///./placeholdr.db
+      - key: ENVIRONMENT
+        value: production
+      - key: TEMP_UPLOAD_DIR
+        value: ./temp_uploads
+    healthCheckPath: /health

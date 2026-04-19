@@ -17,7 +17,20 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-FFMPEG = settings.ffmpeg_path
+
+def _find_ffmpeg() -> str:
+    """Auto-detect ffmpeg: config override → imageio-ffmpeg bundle → PATH."""
+    if settings.ffmpeg_path and os.path.exists(settings.ffmpeg_path):
+        return settings.ffmpeg_path
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+    return "ffmpeg"  # fall back to PATH
+
+
+FFMPEG = _find_ffmpeg()
 
 
 def _extract_audio(video_path: str) -> Optional[str]:

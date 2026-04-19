@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     tribe_enabled: bool = False
     environment: str = "development"
     max_upload_size_mb: int = 500
-    ffmpeg_path: str = r"C:\Users\moksh\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+    ffmpeg_path: str = ""
     dataset_csv_path: str = "./data/youtube_trending.csv"
 
     supabase_url: str = ""
