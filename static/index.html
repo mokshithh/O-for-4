@@ -75,12 +75,8 @@
     }
     .brand { display: flex; align-items: center; gap: 10px; font-family: var(--serif-display); font-weight: 700; letter-spacing: -0.02em; font-size: 16px; }
     .brand-mark {
-      width: 28px; height: 28px; border-radius: 8px;
-      background: var(--signal);
-      position: relative; display: grid; place-items: center;
-      box-shadow: 0 2px 6px rgba(255,0,51,0.22);
-      font-family: var(--serif-display); font-weight: 800;
-      font-size: 13px; color: #fff; letter-spacing: -0.02em;
+      width: 32px; height: 32px;
+      display: grid; place-items: center; flex-shrink: 0;
     }
     .brand-name { color: var(--fg); }
     .brand-name .dot { color: var(--signal); margin-left: 1px; }
@@ -884,7 +880,20 @@
 <div id="app">
   <nav class="topbar">
     <div class="brand">
-      <div class="brand-mark">N</div>
+      <div class="brand-mark">
+        <svg viewBox="0 0 48 58" width="32" height="32" fill="none" stroke="#ff0033" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Outer right hemisphere -->
+          <path d="M24 5 C34 5 43 13 43 23 C43 32 37 39 30 42 C27 44 25 46 24.5 49"/>
+          <!-- Outer left hemisphere -->
+          <path d="M24 5 C14 5 5 13 5 23 C5 32 11 39 18 42 C21 44 23 46 23.5 49"/>
+          <!-- Inner medial fold -->
+          <path d="M24 5 C24 17 19 24 14 29 C11 33 12 38 16 41"/>
+          <!-- Stem -->
+          <line x1="24" y1="49" x2="24" y2="52"/>
+          <!-- Terminal dot -->
+          <circle cx="24" cy="55" r="2.8" fill="#ff0033" stroke="none"/>
+        </svg>
+      </div>
       <div class="brand-name">Nuro<span class="dot">.</span></div>
     </div>
     <div class="top-status">
