@@ -572,6 +572,66 @@
       display: none;
     }
     .brain-att-summary.show { display: block; }
+
+    /* ── 3D Brain WebGL container ────────────────────────────────────── */
+    #brain-3d-container {
+      width: 100%; height: 220px; background: #080808;
+      border-radius: 6px; border: 1px solid var(--line-soft);
+      overflow: hidden; cursor: grab; position: relative;
+    }
+    #brain-3d-container:active { cursor: grabbing; }
+    #brain-3d-container canvas { display: block; }
+    .brain-canvas-wrap { position: relative; }
+
+    .brain-3d-labels {
+      display: flex; justify-content: space-between;
+      padding: 3px 8px 0; pointer-events: none;
+    }
+    .brain-hem-label {
+      font-family: var(--mono); font-size: 9px;
+      color: rgba(255,80,80,0.5); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    .brain-controls-row {
+      display: flex; align-items: center; gap: 8px; padding: 8px 0 2px;
+    }
+    .brain-ctrl-label {
+      font-family: var(--mono); font-size: 9px; color: var(--fg-4);
+      letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+    }
+    .brain-slider {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 2px; background: var(--ink-3); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    .brain-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
+      background: var(--signal); cursor: pointer; box-shadow: 0 0 5px rgba(255,0,51,0.5);
+    }
+    .brain-slider::-moz-range-thumb {
+      width: 11px; height: 11px; border-radius: 50%;
+      background: var(--signal); border: none; box-shadow: 0 0 5px rgba(255,0,51,0.5);
+    }
+
+    .brain-modality-row {
+      padding: 10px 18px 14px; border-top: 1px solid var(--line-soft);
+      display: flex; flex-direction: column; gap: 7px;
+    }
+    .brain-mod-bar {
+      display: grid; grid-template-columns: 42px 1fr 32px; align-items: center; gap: 8px;
+    }
+    .brain-mod-label {
+      font-family: var(--mono); font-size: 9px; color: var(--fg-4);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .brain-mod-track { height: 3px; background: var(--ink-3); border-radius: 2px; overflow: hidden; }
+    .brain-mod-fill {
+      height: 100%; background: var(--signal); border-radius: 2px;
+      transition: width 0.7s cubic-bezier(.4,0,.2,1); width: 0%;
+    }
+    .brain-mod-val {
+      font-size: 9.5px; color: var(--fg-4); text-align: right;
+      font-family: var(--mono); letter-spacing: 0.02em;
+    }
     .brain-att-summary .row { display: flex; justify-content: space-between; align-items: baseline; }
     .brain-att-summary .lbl {
       font-family: var(--mono); font-size: 10.5px; color: var(--fg-3);
@@ -1321,12 +1381,39 @@
             <span class="model-tag" id="brain-model-badge">TRIBE-V2 / fMRI</span>
           </div>
           <div class="brain-canvas-wrap">
-            <canvas id="brain-canvas" width="320" height="200"></canvas>
+            <div id="brain-3d-container"></div>
+            <div class="brain-3d-labels">
+              <span class="brain-hem-label">LH</span>
+              <span class="brain-hem-label">RH</span>
+            </div>
+            <div class="brain-controls-row">
+              <span class="brain-ctrl-label">T</span>
+              <input type="range" id="brain-timestep-slider" min="0" max="9" value="0" step="1" class="brain-slider">
+              <span class="brain-ctrl-label num" id="brain-timestep-label">+0s</span>
+            </div>
+          </div>
+          <div class="brain-modality-row">
+            <div class="brain-mod-bar">
+              <div class="brain-mod-label">VISUAL</div>
+              <div class="brain-mod-track"><div class="brain-mod-fill" id="mod-visual"></div></div>
+              <div class="brain-mod-val num" id="mod-visual-val">—</div>
+            </div>
+            <div class="brain-mod-bar">
+              <div class="brain-mod-label">AUDIO</div>
+              <div class="brain-mod-track"><div class="brain-mod-fill" id="mod-audio"></div></div>
+              <div class="brain-mod-val num" id="mod-audio-val">—</div>
+            </div>
+            <div class="brain-mod-bar">
+              <div class="brain-mod-label">TEXT</div>
+              <div class="brain-mod-track"><div class="brain-mod-fill" id="mod-text"></div></div>
+              <div class="brain-mod-val num" id="mod-text-val">—</div>
+            </div>
           </div>
           <div class="brain-legend">
-            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:var(--neg)"></div>Low</div>
-            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:var(--warn)"></div>Med</div>
-            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:var(--pos)"></div>High</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#1a0000"></div>Off</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#cc0000"></div>Active</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#ff8800"></div>High</div>
+            <div class="brain-legend-item"><div class="brain-legend-dot" style="background:#ffff00"></div>Peak</div>
           </div>
           <div class="attention-timeline" id="attention-timeline" style="display:none">
             <div class="attention-timeline-label"><span>Segment attention</span><span id="att-tl-count" class="num">—</span></div>
@@ -1809,141 +1896,165 @@ async function submitYouTube() {
   }
 }
 
-// ── Brain heatmap visualization ────────────────────────────────────────
-let _brainWaveFrame = null;
+// ── Three.js 3D Brain Visualization ───────────────────────────────────
 let _brainAttentionScores = [];
-let _brainPhase = 0;
-let _brainRegions = [];
-let _brainScanY = 0;
+let _b3R = null, _b3S = null, _b3C = null, _b3Ctrl = null;
+let _b3LH = null, _b3RH = null, _b3Group = null;
+let _b3AnimId = null, _b3Phase = 0, _b3Timestep = 0;
+let _b3ModalData = [], _b3FC = 0;
 
-const BRAIN_REGIONS_DEF = [
-  { nx: 0.50, ny: 0.18, nr: 0.095, label: 'Prefrontal' },
-  { nx: 0.28, ny: 0.28, nr: 0.085, label: 'L-Frontal' },
-  { nx: 0.72, ny: 0.28, nr: 0.085, label: 'R-Frontal' },
-  { nx: 0.18, ny: 0.50, nr: 0.080, label: 'L-Temporal' },
-  { nx: 0.82, ny: 0.50, nr: 0.080, label: 'R-Temporal' },
-  { nx: 0.38, ny: 0.48, nr: 0.078, label: 'L-Parietal' },
-  { nx: 0.62, ny: 0.48, nr: 0.078, label: 'R-Parietal' },
-  { nx: 0.50, ny: 0.65, nr: 0.075, label: 'Limbic' },
-  { nx: 0.32, ny: 0.72, nr: 0.072, label: 'L-Occipital' },
-  { nx: 0.68, ny: 0.72, nr: 0.072, label: 'R-Occipital' },
-  { nx: 0.50, ny: 0.82, nr: 0.065, label: 'Cerebellum' },
-];
+function _hotCol(t) {
+  t = Math.max(0, Math.min(1, t));
+  return [Math.min(1, t * 3), Math.min(1, Math.max(0, t * 3 - 1)), Math.min(1, Math.max(0, t * 3 - 2.5))];
+}
 
-function _attentionToColor(activation, alpha = 1.0) {
-  const a = Math.max(0, Math.min(1, activation));
-  // Red → amber → green for neural heat on a light bg
-  if (a < 0.5) {
-    const t = a * 2;
-    return `rgba(${Math.round(211-20*t)},${Math.round(47+110*t)},${Math.round(47+0*t)},${alpha})`;
-  } else {
-    const t = (a - 0.5) * 2;
-    return `rgba(${Math.round(191-120*t)},${Math.round(157+9*t)},${Math.round(47+17*t)},${alpha})`;
+function _makeBrainHem(side) {
+  const geo = new THREE.SphereGeometry(1, 64, 48);
+  const pos = geo.attributes.position;
+  const n = pos.count;
+  for (let i = 0; i < n; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (side === -1 && x > 0) x = 0;
+    if (side ===  1 && x < 0) x = 0;
+    x *= 0.93; y *= 0.80; z *= 1.08;
+    const len = Math.sqrt(x*x + y*y + z*z) || 1;
+    const nx = x/len, ny = y/len, nz = z/len;
+    const d = 0.068 * Math.sin(nx*12 + ny*8.3) * Math.cos(nz*10.1)
+            + 0.042 * Math.sin(ny*16 + nz*13.7)
+            + 0.026 * Math.cos(nx*22 + nz*18.4) * Math.sin(ny*15)
+            + 0.016 * Math.sin(nx*32 + ny*29 + nz*24.7);
+    x += nx*d; y += ny*d; z += nz*d;
+    pos.setXYZ(i, x, y, z);
   }
+  geo.computeVertexNormals();
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n*3; i += 3) { col[i] = 0.04; col[i+1] = 0; col[i+2] = 0; }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.MeshPhongMaterial({
+    vertexColors: true, shininess: 22,
+    specular: new THREE.Color(0.12, 0.04, 0.04), side: THREE.FrontSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.x = side * 1.06;
+  return mesh;
+}
+
+function _refreshBrainColors(mesh) {
+  if (!mesh?.geometry?.attributes?.color) return;
+  const pos = mesh.geometry.attributes.position;
+  const col = mesh.geometry.attributes.color;
+  const n = pos.count;
+  const mean = _brainAttentionScores.length
+    ? _brainAttentionScores.reduce((a,b)=>a+b,0) / _brainAttentionScores.length : 0.28;
+  for (let i = 0; i < n; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const len = Math.sqrt(x*x+y*y+z*z) || 1;
+    const nx = x/len, ny = y/len, nz = z/len;
+    const vis  = Math.max(0, nz * 1.1)           * (0.5 + 0.5*Math.sin(_b3Phase*0.9 + nz*4));
+    const aud  = Math.max(0, Math.abs(nx)-0.25)*1.5 * (0.5 + 0.5*Math.sin(_b3Phase*1.1 + Math.abs(nx)*3));
+    const fron = Math.max(0, -nz * 0.8)           * (0.5 + 0.5*Math.sin(_b3Phase*0.7 + ny*2));
+    const par  = Math.max(0, ny - 0.1)            * (0.5 + 0.5*Math.sin(_b3Phase*0.6 + nz*2));
+    const limb = Math.max(0, -ny - 0.2)           * (0.4 + 0.4*Math.sin(_b3Phase*1.3));
+    let act = (vis*0.32 + aud*0.28 + fron*0.2 + par*0.13 + limb*0.07) * mean * 2.4;
+    act = Math.max(0.03, Math.min(1, act + 0.04*Math.sin(_b3Phase*2.5 + i*0.003)));
+    const c = _hotCol(act);
+    col.setXYZ(i, c[0], c[1], c[2]);
+  }
+  col.needsUpdate = true;
 }
 
 function startBrainWave() {
-  const canvas = document.getElementById('brain-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  // HiDPI
-  const cssW = canvas.clientWidth || 320, cssH = 200;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = cssW * dpr; canvas.height = cssH * dpr;
-  canvas.style.height = cssH + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const W = cssW, H = cssH;
+  if (typeof THREE === 'undefined') { setTimeout(startBrainWave, 180); return; }
+  const cont = document.getElementById('brain-3d-container');
+  if (!cont) return;
+  if (_b3AnimId) { cancelAnimationFrame(_b3AnimId); _b3AnimId = null; }
+  if (_b3R) { _b3R.dispose(); cont.innerHTML = ''; _b3R = null; }
+  _b3Phase = 0; _b3Timestep = 0; _b3FC = 0;
+  const statusEl = document.getElementById('brain-scan-status');
+  if (statusEl) { statusEl.textContent = 'SCANNING…'; statusEl.style.color = 'var(--signal)'; }
 
-  _brainRegions = BRAIN_REGIONS_DEF.map(d => ({
-    ...d,
-    x: d.nx * W, y: d.ny * H, r: d.nr * Math.min(W, H),
-    activation: 0.5 + (Math.random() - 0.5) * 0.3,
-    targetActivation: 0.5,
-    pulsePhase: Math.random() * Math.PI * 2,
-  }));
+  const W = cont.clientWidth || 310, H = 220;
+  _b3R = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  _b3R.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  _b3R.setSize(W, H);
+  _b3R.setClearColor(0x080808);
+  cont.appendChild(_b3R.domElement);
 
-  _brainScanY = 0;
+  _b3S = new THREE.Scene();
+  _b3C = new THREE.PerspectiveCamera(44, W/H, 0.1, 50);
+  _b3C.position.set(0, 0.6, 4.8);
 
-  function draw() {
-    ctx.fillStyle = '#fdecec';
-    ctx.fillRect(0, 0, W, H);
+  _b3S.add(new THREE.AmbientLight(0xffffff, 0.22));
+  const kl = new THREE.DirectionalLight(0xfff8f0, 1.0); kl.position.set(2, 3, 2.5); _b3S.add(kl);
+  const fl = new THREE.DirectionalLight(0xff1a2e, 0.28); fl.position.set(-2.5, -1, -2); _b3S.add(fl);
+  const rl = new THREE.DirectionalLight(0xff7700, 0.35); rl.position.set(0, -1.5, -3); _b3S.add(rl);
 
-    // Background grid
-    ctx.strokeStyle = 'rgba(255,0,51,0.06)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 16) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 16) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  _b3LH = _makeBrainHem(-1);
+  _b3RH = _makeBrainHem(1);
+  _b3Group = new THREE.Group();
+  _b3Group.add(_b3LH); _b3Group.add(_b3RH);
+  _b3Group.rotation.x = -0.12;
+  _b3S.add(_b3Group);
 
-    // Brain outline
-    ctx.beginPath();
-    ctx.ellipse(W/2, H*0.50, W*0.42, H*0.44, 0, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(255,0,51,0.25)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+  _b3Ctrl = new THREE.OrbitControls(_b3C, _b3R.domElement);
+  _b3Ctrl.enableDamping = true; _b3Ctrl.dampingFactor = 0.07;
+  _b3Ctrl.minDistance = 1.8; _b3Ctrl.maxDistance = 9;
+  _b3Ctrl.autoRotate = true; _b3Ctrl.autoRotateSpeed = 0.65;
 
-    ctx.strokeStyle = 'rgba(255,0,51,0.08)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.ellipse(W/2, H*0.50, W*0.28, H*0.30, 0, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W/2, H*0.07); ctx.lineTo(W/2, H*0.93); ctx.stroke();
-
-    const meanAtt = _brainAttentionScores.length
-      ? _brainAttentionScores.reduce((a,b)=>a+b,0)/_brainAttentionScores.length : 0.5;
-
-    // Connections
-    const connections = [[0,1],[0,2],[1,3],[2,4],[1,5],[2,6],[5,7],[6,7],[3,7],[4,7],[7,8],[7,9],[8,10],[9,10]];
-    connections.forEach(([a,b]) => {
-      const ra = _brainRegions[a], rb = _brainRegions[b];
-      const combined = (ra.activation + rb.activation) / 2;
-      ctx.strokeStyle = _attentionToColor(combined, 0.10 + combined*0.18);
-      ctx.lineWidth = 0.6 + combined * 0.8;
-      ctx.beginPath(); ctx.moveTo(ra.x, ra.y); ctx.lineTo(rb.x, rb.y); ctx.stroke();
-    });
-
-    _brainRegions.forEach((reg, i) => {
-      const scoreIdx = i % Math.max(_brainAttentionScores.length, 1);
-      const score = _brainAttentionScores.length ? _brainAttentionScores[scoreIdx] : meanAtt;
-      reg.targetActivation = score * (0.6 + 0.4 * Math.sin(reg.pulsePhase + _brainPhase * (0.5 + i*0.07)));
-      reg.activation += (reg.targetActivation - reg.activation) * 0.08;
-
-      const act = reg.activation;
-      const pulse = 1 + 0.12 * Math.sin(_brainPhase * (1.2 + i*0.15) + reg.pulsePhase);
-      const r = reg.r * pulse;
-
-      const grd = ctx.createRadialGradient(reg.x, reg.y, 0, reg.x, reg.y, r * 2.4);
-      grd.addColorStop(0, _attentionToColor(act, 0.55));
-      grd.addColorStop(0.5, _attentionToColor(act, 0.22));
-      grd.addColorStop(1, _attentionToColor(act, 0));
-      ctx.beginPath(); ctx.arc(reg.x, reg.y, r * 2.4, 0, Math.PI*2);
-      ctx.fillStyle = grd; ctx.fill();
-
-      const coreGrd = ctx.createRadialGradient(reg.x, reg.y, 0, reg.x, reg.y, r);
-      coreGrd.addColorStop(0, _attentionToColor(act, 0.95));
-      coreGrd.addColorStop(0.6, _attentionToColor(act, 0.55));
-      coreGrd.addColorStop(1, _attentionToColor(act, 0.05));
-      ctx.beginPath(); ctx.arc(reg.x, reg.y, r, 0, Math.PI*2);
-      ctx.fillStyle = coreGrd; ctx.fill();
-    });
-
-    // Scan line
-    const scanColor = `rgba(255,0,51,${0.35 + 0.18*Math.sin(_brainPhase*3)})`;
-    ctx.strokeStyle = scanColor;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(0, _brainScanY); ctx.lineTo(W, _brainScanY); ctx.stroke();
-    ctx.setLineDash([]);
-    _brainScanY = (_brainScanY + 0.9) % H;
-
-    _brainPhase += 0.04;
-    _brainWaveFrame = requestAnimationFrame(draw);
+  const sl = document.getElementById('brain-timestep-slider');
+  if (sl) {
+    sl.value = 0;
+    sl.oninput = function() {
+      _b3Timestep = +this.value;
+      const lbl = document.getElementById('brain-timestep-label');
+      if (lbl) lbl.textContent = '+' + _b3Timestep + 's';
+      _b3UpdateModality();
+    };
   }
-  if (_brainWaveFrame) cancelAnimationFrame(_brainWaveFrame);
-  draw();
+
+  (function draw() {
+    _b3AnimId = requestAnimationFrame(draw);
+    _b3Ctrl.update();
+    _b3Phase += 0.022; _b3FC++;
+    if (_b3FC % 2 === 0) { _refreshBrainColors(_b3LH); _refreshBrainColors(_b3RH); }
+    _b3R.render(_b3S, _b3C);
+  })();
+
+  const ro = new ResizeObserver(() => {
+    const nw = cont.clientWidth;
+    if (_b3R && nw > 0) { _b3R.setSize(nw, H); _b3C.aspect = nw/H; _b3C.updateProjectionMatrix(); }
+  });
+  ro.observe(cont);
 }
 
 function stopBrainWave() {
-  if (_brainWaveFrame) { cancelAnimationFrame(_brainWaveFrame); _brainWaveFrame = null; }
+  if (_b3Ctrl) _b3Ctrl.autoRotate = false;
   const el = document.getElementById('brain-scan-status');
   if (el) { el.textContent = '● COMPLETE'; el.style.color = 'var(--pos)'; }
+  _b3ModalData = Array.from({ length: 10 }, (_, t) => {
+    const s = _brainAttentionScores.length
+      ? _brainAttentionScores[Math.floor(t * _brainAttentionScores.length / 10)] : 0.6;
+    return {
+      visual: Math.max(0, Math.min(1, 0.4  + s*0.45 + 0.08*Math.sin(t*0.9))),
+      audio:  Math.max(0, Math.min(1, 0.25 + s*0.4  + 0.08*Math.sin(t*1.2+1.1))),
+      text:   Math.max(0, Math.min(1, 0.15 + s*0.35 + 0.07*Math.sin(t*0.7+2.4))),
+    };
+  });
+  const sl = document.getElementById('brain-timestep-slider');
+  if (sl) sl.max = 9;
+  _b3UpdateModality();
+}
+
+function _b3UpdateModality() {
+  if (!_b3ModalData.length) return;
+  const d = _b3ModalData[Math.min(_b3Timestep, _b3ModalData.length - 1)];
+  [['visual', d.visual], ['audio', d.audio], ['text', d.text]].forEach(([id, v]) => {
+    const pct = Math.round(v * 100);
+    const f = document.getElementById('mod-' + id);
+    const vl = document.getElementById('mod-' + id + '-val');
+    if (f) f.style.width = pct + '%';
+    if (vl) vl.textContent = pct + '%';
+  });
 }
 
 function _attentionColor(score) {
@@ -2307,5 +2418,7 @@ async function generateThumbnail() {
   }
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
 </body>
 </html>
