@@ -54,20 +54,23 @@ PERSONALIZATION_QUESTIONS = [
 ]
 
 
-def get_dataset_signals(niche: str, ideas_context: str) -> dict:
-    """
-    STUB: returns dataset-backed trend signals for idea scoring.
-    Replace with real dataset query when the dataset pipeline is ready.
-    """
-    return {
-        "status": "stub",
-        "message": "Dataset-backed signals not yet active.",
-        "niche": niche,
-    }
+def get_dataset_signals(niche: str, goal: str = "") -> dict:
+    """Dataset-backed trend signals for idea generation via TrendAlignmentService."""
+    try:
+        from services.dataset.trend_alignment import get_trend_service
+        return get_trend_service().get_idea_signals(niche, goal)
+    except Exception as exc:
+        logger.warning("Dataset signals failed: %s", exc)
+        return {"source": "unavailable", "niche": niche}
 
 
 def generate_ideas(project: Project, db: Session) -> list[IdeaOption]:
     """Generate top-5 ideas via Claude and persist them."""
+    # Fetch dataset signals before building the prompt
+    ds = get_dataset_signals(project.niche or "", project.goal or "")
+    ds_block = ds.get("explanation_for_prompt", "")
+    ranking_guidance = ds.get("ranking_guidance", "")
+
     system = (
         "You are a YouTube content strategist who specialises in long-form video performance. "
         "You analyse niche trends, audience psychology, and what makes videos retain viewers. "
@@ -76,13 +79,14 @@ def generate_ideas(project: Project, db: Session) -> list[IdeaOption]:
 
     prompt = f"""
 Creator profile:
-- Channel URL: {project.channel_url}
 - Niche: {project.niche}
 - Tone: {project.tone}
 - Target audience: {project.target_audience}
 - Goal: {project.goal}
 - Video style: {project.video_style}
 - Intended duration: {project.intended_duration}
+
+{f"Dataset intelligence:{chr(10)}{ds_block}{chr(10)}{chr(10)}Ranking guidance: {ranking_guidance}" if ds_block else ""}
 
 Generate exactly 5 ranked content ideas for this creator. Return a JSON array with this structure:
 [
@@ -121,7 +125,7 @@ Requirements:
     db.query(IdeaOption).filter(IdeaOption.project_id == project.id).delete()
 
     idea_objects = []
-    dataset_signals = get_dataset_signals(project.niche or "", str(ideas_data))
+    dataset_signals = ds  # already fetched above
 
     for idea_data in ideas_data[:5]:
         idea = IdeaOption(

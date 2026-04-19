@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     max_upload_size_mb: int = 500
     ffmpeg_path: str = r"C:\Users\moksh\AppData\Local\CapCut\3.2.0.1106\ffmpeg.exe"
+    dataset_csv_path: str = "./data/youtube_trending.csv"
 
     supabase_url: str = ""
     supabase_anon_key: str = ""

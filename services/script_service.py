@@ -19,17 +19,21 @@ from services.claude_client import chat
 logger = logging.getLogger(__name__)
 
 
-def get_dataset_script_signals(niche: str, title: str) -> dict:
-    """
-    STUB: dataset-backed trend signals for script scoring.
-    Replace with real dataset query.
-    """
-    return {"status": "stub", "niche": niche, "title": title}
+def get_dataset_script_signals(niche: str, title: str, goal: str = "") -> dict:
+    """Dataset-backed trend signals for script generation via TrendAlignmentService."""
+    try:
+        from services.dataset.trend_alignment import get_trend_service
+        return get_trend_service().get_script_signals(niche, title, goal)
+    except Exception as exc:
+        logger.warning("Script dataset signals failed: %s", exc)
+        return {"source": "unavailable", "niche": niche, "title": title}
 
 
 def generate_script(project: Project, idea: IdeaOption, db: Session) -> Script:
     """Generate a personalized script for the selected idea and save it."""
     answers = project.personalization_answers or {}
+    ds = get_dataset_script_signals(project.niche or "", idea.title or "", project.goal or "")
+    ds_block = ds.get("explanation_for_prompt", "")
 
     system = (
         "You are a world-class YouTube script writer who creates content that holds attention "
@@ -48,6 +52,8 @@ Creator profile:
 
 Selected idea: {idea.title}
 Idea context: {idea.explanation}
+
+{f"Dataset intelligence:{chr(10)}{ds_block}" if ds_block else ""}
 
 Creator personalization answers:
 - Personal angle: {answers.get('angle', 'Not provided')}

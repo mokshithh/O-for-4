@@ -210,12 +210,25 @@ def _generate_claude_review(
     )
     script_context = f"\nOriginal script title: {script.title}" if script else ""
 
+    # Dataset benchmark context for review explanations
+    ds_benchmark = ""
+    try:
+        from services.dataset.trend_alignment import get_trend_service
+        bm = get_trend_service().get_review_benchmark(project.niche or "", script.title if script else "")
+        ds_benchmark = (
+            f"\nDataset benchmark context: {bm['benchmark_context']}"
+            f"\nTitle pattern: {bm['title_pattern']} | Format: {bm['content_format']}"
+            f"\nTrend alignment: {bm['trend_score']}/100 | Novelty: {bm['novelty_score']}/100"
+        )
+    except Exception:
+        pass
+
     prompt = f"""
 Creator profile:
 - Niche: {project.niche}
 - Tone: {project.tone}
 - Target audience: {project.target_audience}
-- Goal: {project.goal}{script_context}
+- Goal: {project.goal}{script_context}{ds_benchmark}
 
 Transcript (partial):
 {transcript[:3000] if transcript else "Unavailable — analyse from structure signals."}
@@ -232,10 +245,10 @@ Return a JSON object:
   "virality_potential_score": <float 0–100>,
   "coaching_feedback": "3–5 blunt sentences. E.g. 'The intro takes too long to get to the point.'",
   "score_explanations": {{
-    "niche_fit": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "N/A"}},
-    "retention_potential": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "N/A"}},
+    "niche_fit": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "cite dataset benchmark if context provided, else N/A"}},
+    "retention_potential": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "cite benchmark if available, else N/A"}},
     "brain_engagement": {{"score": <float>, "reasoning": "2 sentences citing attention data", "dataset_signal": "N/A"}},
-    "virality_potential": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "N/A"}}
+    "virality_potential": {{"score": <float>, "reasoning": "2 sentences", "dataset_signal": "cite title pattern or format benchmark if provided, else N/A"}}
   }},
   "improvement_suggestions": ["specific suggestion 1", "specific suggestion 2", "specific suggestion 3"]
 }}
@@ -305,16 +318,16 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
 
         # Stage 3: Transcript
         _push_stage(review, db, "transcript", "Extracting transcript…", done=False,
-                    detail="Running Whisper speech-to-text")
+                    detail="OpenAI Whisper API · extracting audio")
         transcript_segments = transcript_service.extract_segments_from_whisper(video_path)
         if not transcript_segments:
             fallback_dur = duration or 300.0
             transcript_segments = transcript_service.build_mock_segments(fallback_dur)
-            _push_stage(review, db, "transcript", "Transcript extracted (mock segments)",
-                        done=True, detail=f"{len(transcript_segments)} segments (Whisper unavailable)")
+            _push_stage(review, db, "transcript", "Transcript unavailable",
+                        done=True, detail=f"{len(transcript_segments)} time segments (audio extraction failed)")
         else:
             _push_stage(review, db, "transcript", "Transcript extracted",
-                        done=True, detail=f"{len(transcript_segments)} segments")
+                        done=True, detail=f"{len(transcript_segments)} segments via Whisper API")
 
         full_transcript = " ".join(s.get("text", "") for s in transcript_segments)
         review.transcript = full_transcript[:50000]
@@ -328,7 +341,7 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
 
         # Stage 5: Brain simulation
         _push_stage(review, db, "brain_sim", "Initialising brain simulation…", done=False,
-                    detail="Loading TRIBE v2 pipeline")
+                    detail="GPT-4o neural engagement model")
 
         brain_svc = get_brain_service()
         if brain_svc.is_tribe_active():
