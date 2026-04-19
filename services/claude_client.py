@@ -1,28 +1,23 @@
-"""AI chat client — uses OpenAI GPT-4o."""
-from openai import OpenAI
+"""AI chat client — uses Anthropic Claude."""
+import anthropic
 from core.config import settings
 
-_client: OpenAI | None = None
+_client: anthropic.Anthropic | None = None
 
 
-def get_client() -> OpenAI:
+def get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=settings.openai_api_key)
+        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     return _client
 
 
 def chat(system: str, user: str, max_tokens: int = 2048, temperature: float = 0.0, seed: int = 42) -> str:
-    """temperature=0 + seed makes scoring deterministic across calls."""
     client = get_client()
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
         max_tokens=max_tokens,
-        temperature=temperature,
-        seed=seed,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+        system=system,
+        messages=[{"role": "user", "content": user}],
     )
-    return response.choices[0].message.content
+    return response.content[0].text
