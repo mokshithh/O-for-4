@@ -4,7 +4,6 @@ from typing import Optional
 
 class Settings(BaseSettings):
     openai_api_key: str = ""
-    anthropic_api_key: str = ""
     secret_key: str = "dev-secret-change-in-prod"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
