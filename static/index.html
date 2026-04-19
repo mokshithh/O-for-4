@@ -376,6 +376,11 @@
     .score-drill.open { display: block; }
     .score-drill .reasoning { font-size: 12.5px; color: var(--fg-2); line-height: 1.6; }
     .score-drill .ds-signal { font-family: var(--mono); font-size: 11px; color: var(--signal); margin-top: 8px; }
+    .niche-bench { font-family: var(--mono); font-size: 10px; color: var(--fg-4); margin-top: 8px; letter-spacing: 0.04em; }
+    .niche-bench .above { color: var(--pos); } .niche-bench .below { color: var(--warn); }
+    .expand-hint { font-family: var(--mono); font-size: 10px; color: var(--fg-4); margin-top: 10px; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+    .score-cell.expanded .expand-hint .chev { transform: rotate(90deg); }
+    .expand-hint .chev { display: inline-block; transition: transform .2s; }
 
     .score-pos { color: var(--pos); }
     .score-warn { color: var(--warn); }
@@ -926,7 +931,10 @@
           <h1>Studio overview.</h1>
           <p class="lead">Pick up an in-flight project, review a recent cut, or kick off a new video. Every brief is scored against your channel's trend baseline.</p>
         </div>
-        <button class="btn btn-primary" onclick="showScreen('screen-setup')">+ New project <span class="arrow">→</span></button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="showScreen('screen-setup')">+ New project <span class="arrow">→</span></button>
+          <button class="btn btn-ghost" onclick="showScreen('screen-setup')" title="Fill basic channel info then skip directly to video review">Review existing video <span class="arrow">→</span></button>
+        </div>
       </div>
 
       <div class="dash-stats" id="dash-stats">
@@ -1053,6 +1061,7 @@
           <div class="btn-row">
             <button type="button" class="btn btn-ghost" onclick="showScreen('screen-dashboard')"><span class="arrow">←</span> Back</button>
             <span class="spacer"></span>
+            <button type="button" class="btn btn-quiet" id="setup-skip-btn" onclick="submitSetupSkipToReview()">Review existing video <span class="arrow">→</span></button>
             <button type="button" class="btn btn-primary" id="setup-submit-btn" onclick="submitSetup()">Generate ideas <span class="arrow">→</span></button>
           </div>
         </div>
@@ -1659,24 +1668,28 @@ function customBubble(group, value) {
 function getBubble(group) { return _bubbleSelections[group] || ''; }
 
 // ── Setup ──────────────────────────────────────────────────────────────
+function _collectSetup() {
+  return {
+    niche: getBubble('niche'), audience: getBubble('audience'),
+    tone: getBubble('tone'), style: getBubble('style'),
+    goal: getBubble('goal'), duration: getBubble('duration'),
+  };
+}
+function _validateSetup(f) {
+  if (!f.niche) return showError('setup-error', 'Please select or enter your niche.'), false;
+  if (!f.audience) return showError('setup-error', 'Please select your target audience.'), false;
+  if (!f.tone) return showError('setup-error', 'Please select a channel tone.'), false;
+  if (!f.style) return showError('setup-error', 'Please select a video format.'), false;
+  if (!f.goal) return showError('setup-error', 'Please select your main goal.'), false;
+  if (!f.duration) return showError('setup-error', 'Please select an intended duration.'), false;
+  return true;
+}
 async function submitSetup() {
   hideError('setup-error');
-  const niche = getBubble('niche');
-  const audience = getBubble('audience');
-  const tone = getBubble('tone');
-  const style = getBubble('style');
-  const goal = getBubble('goal');
-  const duration = getBubble('duration');
-
-  if (!niche) return showError('setup-error', 'Please select or enter your niche.');
-  if (!audience) return showError('setup-error', 'Please select your target audience.');
-  if (!tone) return showError('setup-error', 'Please select a channel tone.');
-  if (!style) return showError('setup-error', 'Please select a video format.');
-  if (!goal) return showError('setup-error', 'Please select your main goal.');
-  if (!duration) return showError('setup-error', 'Please select an intended duration.');
-
+  const f = _collectSetup();
+  if (!_validateSetup(f)) return;
   setLoading('setup-submit-btn', true);
-  const body = { niche, tone, target_audience: audience, goal, video_style: style, intended_duration: duration };
+  const body = { niche: f.niche, tone: f.tone, target_audience: f.audience, goal: f.goal, video_style: f.style, intended_duration: f.duration };
   try {
     const project = await apiFetch('/projects', { method: 'POST', body: JSON.stringify(body) });
     currentProjectId = project.id;
@@ -1686,6 +1699,22 @@ async function submitSetup() {
     showError('setup-error', err.message);
   } finally {
     setLoading('setup-submit-btn', false, 'Generate ideas <span class="arrow">→</span>');
+  }
+}
+async function submitSetupSkipToReview() {
+  hideError('setup-error');
+  const f = _collectSetup();
+  if (!_validateSetup(f)) return;
+  setLoading('setup-skip-btn', true);
+  const body = { niche: f.niche, tone: f.tone, target_audience: f.audience, goal: f.goal, video_style: f.style, intended_duration: f.duration };
+  try {
+    const project = await apiFetch('/projects', { method: 'POST', body: JSON.stringify(body) });
+    currentProjectId = project.id;
+    showScreen('screen-review-submit');
+  } catch (err) {
+    showError('setup-error', err.message);
+  } finally {
+    setLoading('setup-skip-btn', false, 'Review existing video <span class="arrow">→</span>');
   }
 }
 
@@ -2239,6 +2268,8 @@ function renderResults(review) {
     { key: 'virality_potential_score',  exKey: 'virality_potential', label: 'Virality' },
   ];
   const ex = review.score_explanations || {};
+  const bench = ex._benchmark || {};
+  const nicheEst = bench.niche_score_est || null;
   document.getElementById('score-grid').innerHTML = dims.map((d, i) => {
     const v = review[d.key] || 0;
     const detail = ex[d.exKey] || {};
@@ -2246,6 +2277,15 @@ function renderResults(review) {
     const signal = detail.dataset_signal && detail.dataset_signal !== 'N/A' ? detail.dataset_signal : '';
     const drillId = 'drill-' + d.exKey;
     const ringCls = v >= 70 ? 'score-pos-ring' : v >= 45 ? 'score-warn-ring' : 'score-neg-ring';
+    const benchLine = nicheEst !== null
+      ? (() => {
+          const diff = Math.round(v - nicheEst);
+          const cls = diff >= 0 ? 'above' : 'below';
+          const sign = diff >= 0 ? '+' : '';
+          return `<div class="niche-bench">Niche avg ≈ ${nicheEst}/100 · <span class="${cls}">${sign}${diff} vs avg</span></div>`;
+        })()
+      : '';
+    const hasDetails = reasoning || signal;
     return `<div class="score-cell" onclick="toggleDrill('${drillId}', this)">
       <div class="label">${d.label}</div>
       <div class="value-row">
@@ -2255,6 +2295,8 @@ function renderResults(review) {
         </div>
       </div>
       <div class="bar"><div class="bar-fill" id="bar-${d.exKey}" style="width:0;background:${v>=70?'var(--pos)':v>=45?'var(--warn)':'var(--neg)'}"></div></div>
+      ${benchLine}
+      ${hasDetails ? `<div class="expand-hint"><span class="chev">▸</span> Reasoning</div>` : ''}
       <div class="score-drill" id="${drillId}">
         ${reasoning ? `<div class="reasoning">${reasoning}</div>` : ''}
         ${signal ? `<div class="ds-signal">↳ ${signal}</div>` : ''}

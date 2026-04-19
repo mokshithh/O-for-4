@@ -388,6 +388,24 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
                     detail="Evaluating niche fit, retention, virality")
         claude_data = _generate_claude_review(full_transcript, project, segment_analyses, script)
 
+        # Inject niche benchmark into score_explanations for frontend display
+        try:
+            from services.dataset.trend_alignment import get_trend_service
+            bm = get_trend_service().get_review_benchmark(project.niche or "", script.title if script else "")
+            loader = get_trend_service()._loader
+            stats = loader.get_niche_stats(project.niche or "")
+            niche_score_est = max(38, min(68, round(bm.get("trend_score", 50) * 0.55 + 20)))
+            ex = claude_data.setdefault("score_explanations", {})
+            ex["_benchmark"] = {
+                "niche": project.niche or "",
+                "niche_score_est": niche_score_est,
+                "trend_score": bm.get("trend_score", 50),
+                "benchmark_text": bm.get("benchmark_context", ""),
+                "source": "dataset" if loader.is_loaded() else "heuristic",
+            }
+        except Exception:
+            pass
+
         scores = [
             claude_data.get("niche_fit_score", 50),
             claude_data.get("retention_potential_score", 50),
