@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     pythonVersion: "3.11.9"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && mkdir -p data && python -c "import lzma, shutil; shutil.copyfileobj(lzma.open('youtube_trending_cleaned.csv.xz'), open('data/youtube_trending.csv','wb'))" || true
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: OPENAI_API_KEY

@@ -129,7 +129,8 @@
     }
     .step.active { color: var(--fg); background: var(--ink-2); }
     .step.active .num { border-color: var(--signal); color: var(--signal); background: var(--signal-dim); }
-    .step.done { color: var(--fg-2); }
+    .step.done { color: var(--fg-2); cursor: pointer; transition: background .12s; }
+    .step.done:hover { background: var(--ink-2); color: var(--fg); }
     .step.done .num { border-color: var(--signal); color: var(--signal); background: #fff; }
     .step.done .num::before { content: "✓"; }
     .step.done .num span { display: none; }
@@ -1472,6 +1473,16 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
+
+// Clickable stepper: done steps navigate back
+const _stepNav = { 'Setup': 'screen-setup', 'Ideas': 'screen-ideas', 'Personalize': 'screen-questions', 'Script': 'screen-script', 'Review': 'screen-results' };
+document.addEventListener('click', function(e) {
+  const step = e.target.closest('.step.done');
+  if (!step) return;
+  const label = step.querySelector('.label')?.textContent?.trim();
+  const target = _stepNav[label];
+  if (target) showScreen(target);
+});
 
 function setLoading(btnId, loading, text) {
   const btn = document.getElementById(btnId);
