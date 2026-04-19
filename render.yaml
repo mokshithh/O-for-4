@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: placeholdr
+    name: nuro
     runtime: python
     plan: free
     pythonVersion: "3.11.9"
@@ -20,7 +20,7 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: DATABASE_URL
-        value: sqlite:///./placeholdr.db
+        value: sqlite:///./nuro.db
       - key: ENVIRONMENT
         value: production
       - key: TEMP_UPLOAD_DIR

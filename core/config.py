@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-in-prod"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
-    database_url: str = "sqlite:///./placeholdr.db"
+    database_url: str = "sqlite:///./nuro.db"
     temp_upload_dir: str = "./temp_uploads"
     tribe_model_path: str = "./brain/tribe_v2/pretrained"
     tribe_enabled: bool = False

@@ -222,7 +222,7 @@ API docs at `http://localhost:8765/docs`.
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Yes | Supabase anon key (frontend auth) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server auth) |
-| `DATABASE_URL` | No | Defaults to `sqlite:///./placeholdr.db` |
+| `DATABASE_URL` | No | Defaults to `sqlite:///./nuro.db` |
 | `TRIBE_ENABLED` | No | Set `true` to activate Meta Tribe v2 model |
 
 ---
