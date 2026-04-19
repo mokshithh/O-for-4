@@ -29,7 +29,10 @@ def generate_project_ideas(
     current_user: User = Depends(get_current_user),
 ):
     project = _get_project(project_id, current_user.id, db)
-    ideas = generate_ideas(project, db)
+    try:
+        ideas = generate_ideas(project, db)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Idea generation failed: {exc}")
     return IdeasGeneratedResponse(
         project_id=project_id,
         ideas=[IdeaOptionResponse.model_validate(i) for i in ideas],

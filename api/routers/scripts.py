@@ -37,7 +37,10 @@ def generate_project_script(
     if not idea:
         raise HTTPException(status_code=404, detail="Selected idea not found")
 
-    script = generate_script(project, idea, db)
+    try:
+        script = generate_script(project, idea, db)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Script generation failed: {exc}")
     return ScriptResponse.model_validate(script)
 
 

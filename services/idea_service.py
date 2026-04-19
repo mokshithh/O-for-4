@@ -1,17 +1,12 @@
 """
 Idea Generation Service
-=======================
-Generates the top-5 ranked content ideas for a creator.
-
-Dataset integration boundary:
-  - get_dataset_signals() is the stub to plug in real dataset-backed signals.
-  - Currently returns empty dict; replace with real dataset query when available.
+Generates the top-5 ranked content ideas for a creator using dataset signals + GPT-4o.
 """
 
 from __future__ import annotations
 import json
+import re
 import logging
-from typing import Optional
 from sqlalchemy.orm import Session
 
 from models.project import Project, ProjectStatus
@@ -55,87 +50,179 @@ PERSONALIZATION_QUESTIONS = [
 
 
 def get_dataset_signals(niche: str, goal: str = "") -> dict:
-    """Dataset-backed trend signals for idea generation via TrendAlignmentService."""
     try:
         from services.dataset.trend_alignment import get_trend_service
         return get_trend_service().get_idea_signals(niche, goal)
     except Exception as exc:
-        logger.warning("Dataset signals failed: %s", exc)
-        return {"source": "unavailable", "niche": niche}
+        logger.warning("Dataset signals unavailable: %s", exc)
+        return _fallback_signals(niche, goal)
+
+
+def _fallback_signals(niche: str, goal: str) -> dict:
+    """Hardcoded heuristics when the dataset service is unavailable."""
+    niche_lower = niche.lower()
+    goal_lower = goal.lower()
+
+    if any(k in niche_lower for k in ["finance", "money", "wealth", "invest"]):
+        patterns = ["problem/truth framing", "numbered list", "reveal/result"]
+        formats = ["explainer", "story", "commentary"]
+        notes = (
+            "Personal finance videos perform best when they surface a painful truth or "
+            "debunk a common myth. Numbered lists ('5 money mistakes') drive high click-through. "
+            "Story-led videos ('How I paid off debt') outperform generic advice by 2-3x on retention."
+        )
+    elif any(k in niche_lower for k in ["fitness", "health", "workout"]):
+        patterns = ["challenge/experiment", "problem/truth framing", "numbered list"]
+        formats = ["challenge", "explainer", "story"]
+        notes = (
+            "Fitness channels that show real results and transformations get 3x more saves. "
+            "Challenge formats ('I worked out every day for 30 days') consistently trend. "
+            "Avoid generic 'workout tips' — specificity (exact routine, exact results) wins."
+        )
+    elif any(k in niche_lower for k in ["tech", "gadget", "software", "ai", "code"]):
+        patterns = ["reveal/result", "question/curiosity", "problem/truth framing"]
+        formats = ["review", "explainer", "commentary"]
+        notes = (
+            "Tech audiences reward specificity and honesty — reviews that call out flaws get "
+            "more engagement than puff pieces. Opinion/commentary on AI trends is high-reach right now. "
+            "Comparison videos ('X vs Y after 6 months') retain viewers longer than single-product reviews."
+        )
+    elif any(k in niche_lower for k in ["business", "entrepreneur", "startup"]):
+        patterns = ["reveal/result", "problem/truth framing", "challenge/experiment"]
+        formats = ["story", "explainer", "commentary"]
+        notes = (
+            "Business audiences engage most with real case studies and transparent breakdowns. "
+            "Income reports and 'I built X in Y days' videos drive massive curiosity-gap clicks. "
+            "Contrarian takes ('Why most business advice is wrong') outperform standard listicles."
+        )
+    else:
+        patterns = ["problem/truth framing", "question/curiosity", "numbered list"]
+        formats = ["explainer", "story", "commentary"]
+        notes = (
+            "Curiosity-gap titles consistently outperform descriptive ones across niches. "
+            "Videos that promise a specific transformation or reveal outperform generic advice. "
+            "Aim for titles 50-65 characters long — specific beats vague every time."
+        )
+
+    viral_goal = any(k in goal_lower for k in ["viral", "reach", "subscribers", "grow"])
+    ranking = (
+        f"Rank ideas using: 40% trend alignment with {patterns[0]} and {patterns[1]} patterns, "
+        f"25% engagement potential for {niche} audience, 15% fit with goal '{goal}', "
+        f"10% format confidence ({formats[0]}, {formats[1]}), 10% novelty. "
+        f"{'Prioritise reach and shareability over depth.' if viral_goal else 'Prioritise retention and authority-building over raw reach.'}"
+    )
+
+    return {
+        "source": "heuristic",
+        "niche": niche,
+        "top_title_pattern_labels": patterns,
+        "top_content_format_labels": formats,
+        "explanation_for_prompt": f"Data intelligence for '{niche}' (heuristic baseline):\n- Top performing title patterns: {', '.join(patterns)}\n- Top content formats: {', '.join(formats)}\n- Key insight: {notes}",
+        "ranking_guidance": ranking,
+    }
+
+
+def _extract_json_array(raw: str) -> list:
+    """Robustly extract a JSON array from LLM output regardless of formatting."""
+    raw = raw.strip()
+    # Strip markdown fences
+    raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+    raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
+    raw = raw.strip()
+
+    # Try direct parse first
+    try:
+        result = json.loads(raw)
+        if isinstance(result, list):
+            return result
+        if isinstance(result, dict) and "ideas" in result:
+            return result["ideas"]
+    except json.JSONDecodeError:
+        pass
+
+    # Find first [...] block
+    match = re.search(r"\[.*\]", raw, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"Could not extract JSON array from LLM response. Raw (first 300 chars): {raw[:300]}")
 
 
 def generate_ideas(project: Project, db: Session) -> list[IdeaOption]:
-    """Generate top-5 ideas via Claude and persist them."""
-    # Fetch dataset signals before building the prompt
+    """Generate top-5 ideas via GPT-4o using dataset signals, then persist them."""
     ds = get_dataset_signals(project.niche or "", project.goal or "")
     ds_block = ds.get("explanation_for_prompt", "")
     ranking_guidance = ds.get("ranking_guidance", "")
 
+    data_section = ""
+    if ds_block:
+        data_section = f"\nDataset intelligence:\n{ds_block}\n\nRanking guidance: {ranking_guidance}\n"
+
     system = (
-        "You are a YouTube content strategist who specialises in long-form video performance. "
-        "You analyse niche trends, audience psychology, and what makes videos retain viewers. "
-        "Output must be valid JSON only — no markdown fences, no commentary."
+        "You are an elite YouTube content strategist who has studied thousands of viral videos. "
+        "You understand niche trends, thumbnail psychology, hook structure, and audience retention. "
+        "You give specific, creator-ready advice — not generic platitudes. "
+        "Output must be a valid JSON array only. No markdown fences. No commentary before or after."
     )
 
-    prompt = f"""
-Creator profile:
+    prompt = f"""Creator profile:
 - Niche: {project.niche}
 - Tone: {project.tone}
 - Target audience: {project.target_audience}
 - Goal: {project.goal}
 - Video style: {project.video_style}
 - Intended duration: {project.intended_duration}
+{data_section}
+Generate exactly 5 ranked YouTube video ideas for this creator. Each idea must be tailored to this specific creator's niche, voice, and audience — not generic advice they could Google.
 
-{f"Dataset intelligence:{chr(10)}{ds_block}{chr(10)}{chr(10)}Ranking guidance: {ranking_guidance}" if ds_block else ""}
-
-Generate exactly 5 ranked content ideas for this creator. Return a JSON array with this structure:
+Return a JSON array with exactly this structure:
 [
   {{
     "rank": 1,
-    "title": "Full video title",
-    "hook": "One sentence describing the compelling opening hook",
-    "explanation": "2-3 sentences on why this idea will perform well for this creator",
-    "trend_alignment": "1-2 sentences on how this aligns with current long-form trends in this niche"
-  }},
-  ...
+    "title": "The full compelling YouTube video title (50-65 characters ideal)",
+    "hook": "The exact opening 1-2 sentences to say on camera that makes the viewer stay",
+    "explanation": "2-3 sentences explaining WHY this specific idea will perform well for this creator and audience",
+    "trend_alignment": "1-2 sentences on how this taps into current patterns that drive views and retention in this niche"
+  }}
 ]
 
-Requirements:
-- Ideas must be ranked from strongest (1) to good (5)
-- Each idea must be specific to this creator's niche, goal, and audience
-- Titles should be compelling and optimised for YouTube click-through
-- The explanation should sound like a savvy creator strategist, not a corporate AI
-- Return ONLY the JSON array
-"""
-
-    raw = chat(system=system, user=prompt, max_tokens=2000)
+Ranking rules:
+- Rank 1 = highest predicted performance (strongest title pattern + best audience fit)
+- Titles must be specific and curiosity-driven — never vague or generic
+- The hook field should be an actual script line, not a description of a hook
+- Return ONLY the JSON array, nothing else"""
 
     try:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        ideas_data = json.loads(raw)
+        raw = chat(system=system, user=prompt, max_tokens=2500)
     except Exception as exc:
-        logger.error("Failed to parse ideas JSON: %s\nRaw: %s", exc, raw[:500])
-        raise ValueError("Idea generation returned invalid JSON") from exc
+        logger.error("OpenAI call failed: %s", exc)
+        raise RuntimeError(f"AI service error: {exc}") from exc
+
+    try:
+        ideas_data = _extract_json_array(raw)
+    except Exception as exc:
+        logger.error("JSON parse failed. Raw response: %s", raw[:500])
+        raise ValueError(f"AI returned invalid format: {exc}") from exc
+
+    if not ideas_data:
+        raise ValueError("AI returned empty ideas list")
 
     # Clear old ideas for this project
     db.query(IdeaOption).filter(IdeaOption.project_id == project.id).delete()
 
     idea_objects = []
-    dataset_signals = ds  # already fetched above
-
-    for idea_data in ideas_data[:5]:
+    for i, idea_data in enumerate(ideas_data[:5]):
         idea = IdeaOption(
             project_id=project.id,
-            rank=idea_data["rank"],
-            title=idea_data["title"],
+            rank=idea_data.get("rank", i + 1),
+            title=idea_data.get("title", f"Idea {i+1}"),
             hook=idea_data.get("hook"),
             explanation=idea_data.get("explanation"),
             trend_alignment=idea_data.get("trend_alignment"),
-            dataset_signals=dataset_signals,
+            dataset_signals=ds,
         )
         db.add(idea)
         idea_objects.append(idea)
