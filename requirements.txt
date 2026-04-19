@@ -8,6 +8,8 @@ python-multipart==0.0.9
 pydantic[email]==2.9.2
 pydantic-settings==2.5.2
 openai>=1.30.0
+supabase>=2.0.0
+PyJWT>=2.8.0
 imageio-ffmpeg>=0.5.1
 pandas>=2.0.0
 yt-dlp==2024.9.27
