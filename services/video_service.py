@@ -61,22 +61,9 @@ def fetch_youtube(youtube_url: str) -> str:
 
 
 def get_video_duration(video_path: str) -> Optional[float]:
-    """Return video duration in seconds using ffprobe."""
-    try:
-        import subprocess
-        result = subprocess.run(
-            [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                video_path,
-            ],
-            capture_output=True, text=True, timeout=30
-        )
-        return float(result.stdout.strip())
-    except Exception as exc:
-        logger.warning("Could not get video duration: %s", exc)
-        return None
+    """Return video duration in seconds using ffmpeg (CapCut build)."""
+    from services.transcript_service import get_video_duration as _dur
+    return _dur(video_path)
 
 
 def delete_temp_file(path: str) -> None:

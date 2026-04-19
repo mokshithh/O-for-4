@@ -510,7 +510,7 @@
         <div class="brain-panel">
           <h3>🧠 Brain Simulation</h3>
           <p class="subtitle">TRIBE v2 cortical activity · real-time</p>
-          <div id="brain-model-badge" class="brain-model-badge">GPT-4o Brain Sim</div>
+          <div id="brain-model-badge" class="brain-model-badge">Neural Engagement Model · GPT-4o</div>
           <div class="brain-canvas-wrap">
             <canvas id="brain-canvas" width="280" height="160" style="width:100%;background:#060610;border-radius:8px"></canvas>
           </div>
@@ -1209,7 +1209,7 @@ async function pollReview() {
       if (prog.processing_log) renderStages(prog.processing_log);
       if (prog.tribe_used !== undefined) {
         const badge = document.getElementById('brain-model-badge');
-        if (badge) badge.textContent = prog.tribe_used ? 'TRIBE v2 (fMRI)' : 'GPT-4o Brain Sim';
+        if (badge) badge.textContent = prog.tribe_used ? 'TRIBE v2 (fMRI)' : 'Neural Engagement Model · GPT-4o';
       }
 
       if (prog.status === 'complete') {

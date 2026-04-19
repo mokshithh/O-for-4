@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     tribe_enabled: bool = False
     environment: str = "development"
     max_upload_size_mb: int = 500
+    ffmpeg_path: str = r"C:\Users\moksh\AppData\Local\CapCut\3.2.0.1106\ffmpeg.exe"
 
     supabase_url: str = ""
     supabase_anon_key: str = ""
