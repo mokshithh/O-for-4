@@ -1200,14 +1200,10 @@
             <div class="eyebrow"><span class="num-tag">↳ STEP 05</span></div>
             <h2>Submit your cut</h2>
           </div>
-          <div class="sub">File or YouTube · raw uploads aren't stored</div>
+          <div class="sub">Upload your video file · raw uploads aren't stored</div>
         </div>
         <div class="panel-bd">
           <div id="review-error" class="alert alert-error" style="display:none"></div>
-          <div class="video-tabs">
-            <button id="tab-upload-btn" class="active" onclick="switchVideoTab('upload')">Upload file</button>
-            <button id="tab-yt-btn" onclick="switchVideoTab('youtube')">YouTube link</button>
-          </div>
           <div id="upload-panel">
             <div class="field">
               <label>Video file</label>
@@ -1215,13 +1211,6 @@
               <div class="micro" style="margin-top:8px">MP4 / MOV / WebM · Max 500 MB</div>
             </div>
             <button class="btn btn-primary" onclick="submitUpload()">Start review <span class="arrow">→</span></button>
-          </div>
-          <div id="youtube-panel" style="display:none">
-            <div class="field">
-              <label>YouTube URL</label>
-              <input type="url" id="yt-url" placeholder="https://youtube.com/watch?v=…" />
-            </div>
-            <button class="btn btn-primary" onclick="submitYouTube()">Start review <span class="arrow">→</span></button>
           </div>
         </div>
       </div>
