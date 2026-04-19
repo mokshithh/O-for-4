@@ -10,7 +10,7 @@ from models.user import User
 from models.project import Project, ProjectStatus
 from models.review import VideoReview, VideoSource, ReviewStatus
 from schemas.review import ReviewResponse, ReviewStatusResponse, VideoSubmitRequest
-from services import video_service, review_service
+from services import video_service, review_service, title_service
 
 router = APIRouter(prefix="/projects/{project_id}/review", tags=["review"])
 
@@ -183,6 +183,23 @@ def get_review(
     if review.status != ReviewStatus.complete:
         raise HTTPException(status_code=202, detail=f"Review status: {review.status}")
     return ReviewResponse.model_validate(review)
+
+
+@router.post("/{review_id}/titles")
+def get_title_suggestions(
+    project_id: str,
+    review_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = _get_project(project_id, current_user.id, db)
+    review = db.query(VideoReview).filter(VideoReview.id == review_id, VideoReview.project_id == project_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if review.status != ReviewStatus.complete:
+        raise HTTPException(status_code=400, detail="Review not complete yet")
+    suggestions = title_service.generate_title_suggestions(review, project)
+    return {"suggestions": suggestions}
 
 
 @router.get("", response_model=list[ReviewResponse])
