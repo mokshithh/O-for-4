@@ -6,6 +6,7 @@ build/
 .env
 *.db
 temp_uploads/
+data/
 brain/tribe_v2/
 *.pth
 *.pt
