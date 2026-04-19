@@ -5,7 +5,7 @@ from models.project import ProjectStatus
 
 
 class CreatorSetupRequest(BaseModel):
-    channel_url: str
+    channel_url: Optional[str] = None
     niche: str
     tone: str
     target_audience: str

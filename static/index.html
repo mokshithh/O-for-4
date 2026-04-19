@@ -82,9 +82,16 @@
 
     /* Scores */
     .score-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
-    .score-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .score-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.15s; user-select: none; }
+    .score-card:hover { border-color: var(--accent-light); }
+    .score-card.expanded { border-color: var(--accent); }
     .score-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
     .score-card .value { font-size: 32px; font-weight: 700; }
+    .score-card .expand-hint { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .score-drill { display: none; margin-top: 10px; text-align: left; border-top: 1px solid var(--border); padding-top: 10px; }
+    .score-drill.open { display: block; }
+    .score-drill .reasoning { font-size: 12px; color: var(--text); line-height: 1.6; }
+    .score-drill .ds-signal { font-size: 11px; color: var(--accent-light); margin-top: 6px; font-weight: 600; }
     .score-high { color: var(--success); }
     .score-mid { color: var(--warning); }
     .score-low { color: var(--danger); }
@@ -240,11 +247,6 @@
         <h2>Creator Setup</h2>
         <p class="subtitle">Tell us about your channel so we can recommend the right ideas.</p>
         <div id="setup-error" class="alert alert-error" style="display:none"></div>
-
-        <div class="field">
-          <label>YouTube channel URL</label>
-          <input type="url" id="s-channel" placeholder="https://youtube.com/@yourhandle" />
-        </div>
 
         <div class="field">
           <label>Your niche</label>
@@ -727,7 +729,6 @@ async function submitSetup() {
 
   setLoading('setup-submit-btn', true, 'Generate Ideas →');
   const body = {
-    channel_url: document.getElementById('s-channel').value || 'https://youtube.com/',
     niche,
     tone,
     target_audience: audience,
@@ -1193,6 +1194,23 @@ function renderStages(log) {
   list.innerHTML = html || '<div class="stage-item"><span class="stage-icon">⏳</span><div><div class="stage-label">Initialising…</div></div></div>';
 }
 
+// ── Score drill-down ──────────────────────────────────────────────────────
+
+function toggleDrill(drillId, card) {
+  const drill = document.getElementById(drillId);
+  if (!drill) return;
+  const isOpen = drill.classList.contains('open');
+  // Close all others first
+  document.querySelectorAll('.score-drill.open').forEach(d => {
+    d.classList.remove('open');
+    d.closest('.score-card').classList.remove('expanded');
+  });
+  if (!isOpen) {
+    drill.classList.add('open');
+    card.classList.add('expanded');
+  }
+}
+
 // ── Review Results ─────────────────────────────────────────────────────────
 
 async function pollReview() {
@@ -1249,19 +1267,29 @@ function renderResults(review) {
   document.getElementById('perf-badge-wrap').innerHTML =
     `<span class="perf-badge ${labelMap[label] || 'badge-promising'}">${label}</span>`;
 
-  // Score grid
+  // Score grid with drill-down
   const dims = [
-    { key: 'niche_fit_score', label: 'Niche Fit' },
-    { key: 'retention_potential_score', label: 'Retention' },
-    { key: 'brain_engagement_score', label: 'Brain Engagement' },
-    { key: 'virality_potential_score', label: 'Virality' },
+    { key: 'niche_fit_score',         exKey: 'niche_fit',          label: 'Niche Fit' },
+    { key: 'retention_potential_score', exKey: 'retention_potential', label: 'Retention' },
+    { key: 'brain_engagement_score',  exKey: 'brain_engagement',   label: 'Brain Engagement' },
+    { key: 'virality_potential_score', exKey: 'virality_potential', label: 'Virality' },
   ];
+  const ex = review.score_explanations || {};
   document.getElementById('score-grid').innerHTML = dims.map(d => {
     const v = review[d.key] || 0;
-    return `<div class="score-card">
+    const detail = ex[d.exKey] || {};
+    const reasoning = detail.reasoning || '';
+    const signal = detail.dataset_signal && detail.dataset_signal !== 'N/A' ? detail.dataset_signal : '';
+    const drillId = 'drill-' + d.exKey;
+    return `<div class="score-card" onclick="toggleDrill('${drillId}', this)">
       <div class="label">${d.label}</div>
       <div class="value ${scoreClass(v)}">${v.toFixed(0)}</div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${v}%"></div></div>
+      ${reasoning ? `<div class="expand-hint">▾ tap for reasoning</div>` : ''}
+      <div class="score-drill" id="${drillId}">
+        ${reasoning ? `<div class="reasoning">${reasoning}</div>` : ''}
+        ${signal ? `<div class="ds-signal">📊 ${signal}</div>` : ''}
+      </div>
     </div>`;
   }).join('');
 
