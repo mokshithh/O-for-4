@@ -847,6 +847,33 @@
       cursor: pointer; color: var(--fg-2); transition: all .15s;
     }
     .title-copy-btn:hover { border-color: var(--signal-line); color: var(--signal); }
+
+    /* ── Review progress bar loading ───────────────────────── */
+    .review-progress-wrap { padding: 60px 24px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .review-progress-header { text-align: center; }
+    .review-progress-header .stage-counter { font-family: var(--mono); font-size: 11px; color: var(--fg-4); letter-spacing: 0.08em; margin-bottom: 8px; }
+    .review-progress-header .stage-msg { font-size: 15px; font-weight: 500; color: var(--fg); min-height: 24px; transition: opacity .3s; }
+    .review-progress-bar-track { width: 100%; max-width: 380px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+    .review-progress-bar-fill { height: 100%; background: var(--signal); border-radius: 2px; transition: width .6s ease; width: 0%; }
+    .review-progress-sub { font-family: var(--mono); font-size: 10.5px; color: var(--fg-4); letter-spacing: 0.04em; }
+
+    /* ── Coming soon card ───────────────────────────────────── */
+    .coming-soon-card { border: 1px dashed var(--line); border-radius: var(--radius-lg); padding: 18px 20px; display: flex; align-items: center; gap: 14px; margin-top: 14px; opacity: 0.75; }
+    .coming-soon-card .cs-icon { font-size: 22px; flex-shrink: 0; }
+    .coming-soon-card .cs-body { flex: 1; }
+    .coming-soon-card .cs-title { font-weight: 600; font-size: 13px; color: var(--fg); }
+    .coming-soon-card .cs-desc { font-size: 12px; color: var(--fg-3); margin-top: 3px; line-height: 1.5; }
+    .coming-soon-card .cs-badge { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; background: var(--ink-2); border: 1px solid var(--line); color: var(--fg-4); padding: 3px 7px; border-radius: 4px; flex-shrink: 0; }
+    .cs-powered { font-family: var(--mono); font-size: 9px; color: var(--fg-4); margin-top: 4px; }
+
+    /* ── Nano Banana badge ──────────────────────────────────── */
+    .nano-badge { background: linear-gradient(135deg,#f7c948,#f4a300); color: #3d2800; padding: 2px 7px; border-radius: 3px; font-weight: 700; font-size: 9px; letter-spacing: 0.06em; margin-left: 6px; vertical-align: middle; }
+    .tab-coming-soon { position: relative; }
+    .tab-coming-soon::after { content: "SOON"; position: absolute; top: -6px; right: -4px; font-family: var(--mono); font-size: 7px; letter-spacing: 0.06em; background: var(--warn); color: #fff; padding: 1px 4px; border-radius: 3px; font-weight: 700; }
+
+    /* ── Shorts chip ────────────────────────────────────────── */
+    .chip.shorts-chip { border-color: var(--signal-line); color: var(--signal); }
+    .chip.shorts-chip.selected { background: var(--signal); color: #fff; border-color: var(--signal); }
   </style>
 </head>
 <body>
@@ -1046,6 +1073,8 @@
           <div class="field">
             <label>Target duration</label>
             <div class="chip-grid" id="bubbles-duration">
+              <div class="chip shorts-chip" onclick="selectBubble('duration',this,'Shorts (under 60s)')">⚡ Shorts</div>
+              <div class="chip" onclick="selectBubble('duration',this,'1–5 minutes')">1–5 min</div>
               <div class="chip" onclick="selectBubble('duration',this,'5–10 minutes')">5–10 min</div>
               <div class="chip" onclick="selectBubble('duration',this,'10–15 minutes')">10–15 min</div>
               <div class="chip" onclick="selectBubble('duration',this,'15–20 minutes')">15–20 min</div>
@@ -1207,6 +1236,15 @@
               <div class="micro" style="margin-top:8px">MP4 / MOV / WebM · Max 500 MB</div>
             </div>
             <button class="btn btn-primary" onclick="submitUpload()">Start review <span class="arrow">→</span></button>
+            <div class="coming-soon-card">
+              <div class="cs-icon">🎬</div>
+              <div class="cs-body">
+                <div class="cs-title">AI Video Preview</div>
+                <div class="cs-desc">See how your video should look before you film it — pacing, structure, and visuals auto-generated from your script.</div>
+                <div class="cs-powered">Powered by <strong>Kling 3.0</strong></div>
+              </div>
+              <div class="cs-badge">Coming Soon</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1224,7 +1262,18 @@
 
       <div class="review-layout">
         <div id="results-main">
-          <div id="results-loading" class="loading" style="padding:60px 0;justify-content:center"><div class="spinner"></div>Awaiting brain analysis…</div>
+          <div id="results-loading" style="display:block">
+            <div class="review-progress-wrap">
+              <div class="review-progress-header">
+                <div class="stage-counter" id="progress-counter">STAGE 1 / 6</div>
+                <div class="stage-msg" id="progress-msg">Uploading video…</div>
+              </div>
+              <div class="review-progress-bar-track">
+                <div class="review-progress-bar-fill" id="progress-bar"></div>
+              </div>
+              <div class="review-progress-sub" id="progress-sub">Initialising analysis pipeline…</div>
+            </div>
+          </div>
           <div id="results-content" style="display:none">
 
             <div class="panel">
@@ -1294,7 +1343,7 @@
                 </div>
                 <div class="video-tabs" style="margin-bottom:0">
                   <button id="tab-titles-btn" class="active" onclick="switchCreativeTab('titles')">Title Optimizer</button>
-                  <button id="tab-thumb-btn" onclick="switchCreativeTab('thumbnail')">Thumbnail Studio</button>
+                  <button id="tab-thumb-btn" class="tab-coming-soon" onclick="switchCreativeTab('thumbnail')">Thumbnail Studio <span class="nano-badge">Nano Banana</span></button>
                 </div>
               </div>
 
@@ -1308,51 +1357,21 @@
                 <div id="titles-list" style="display:none"></div>
               </div>
 
-              <!-- Thumbnail tab -->
+              <!-- Thumbnail tab — Coming Soon -->
               <div id="creative-thumbnail" class="panel-bd" style="display:none">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-                  <div class="field" style="margin-bottom:0">
-                    <label>Style</label>
-                    <div class="chip-grid" id="thumb-style-chips">
-                      <div class="chip selected" onclick="selectThumbChip('style',this,'Cinematic')">Cinematic</div>
-                      <div class="chip" onclick="selectThumbChip('style',this,'Minimal')">Minimal</div>
-                      <div class="chip" onclick="selectThumbChip('style',this,'Bold &amp; Loud')">Bold</div>
-                      <div class="chip" onclick="selectThumbChip('style',this,'Face-cam')">Face-cam</div>
-                    </div>
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:16px;text-align:center">
+                  <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#f7c948,#f4a300);display:grid;place-items:center;font-size:26px;box-shadow:0 4px 16px rgba(244,163,0,0.28)">🎨</div>
+                  <div>
+                    <div style="font-weight:700;font-size:16px;color:var(--fg);margin-bottom:4px">Thumbnail Studio</div>
+                    <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--fg-4);margin-bottom:12px">POWERED BY <span style="background:linear-gradient(135deg,#f7c948,#f4a300);color:#3d2800;padding:2px 6px;border-radius:3px;font-weight:800">NANO BANANA</span></div>
+                    <p style="font-size:13px;color:var(--fg-3);max-width:320px;line-height:1.6">AI-generated thumbnail variants tailored to your niche, hook, and tone. Up to 5 options per video — click to export.</p>
                   </div>
-                  <div class="field" style="margin-bottom:0">
-                    <label>Mood</label>
-                    <div class="chip-grid" id="thumb-mood-chips">
-                      <div class="chip selected" onclick="selectThumbChip('mood',this,'Energetic')">Energetic</div>
-                      <div class="chip" onclick="selectThumbChip('mood',this,'Mysterious')">Mysterious</div>
-                      <div class="chip" onclick="selectThumbChip('mood',this,'Professional')">Professional</div>
-                      <div class="chip" onclick="selectThumbChip('mood',this,'Warm')">Warm</div>
-                    </div>
+                  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+                    <div style="background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--fg-3)">Face-cam layouts</div>
+                    <div style="background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--fg-3)">Text overlay generation</div>
+                    <div style="background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--fg-3)">CTR-optimised compositions</div>
                   </div>
-                </div>
-                <div class="field">
-                  <label>Thumbnail prompt</label>
-                  <textarea id="thumb-prompt" class="input" style="min-height:72px;resize:vertical" placeholder="e.g. Person looking shocked at a graph going up, red background, bold text overlay…"></textarea>
-                </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
-                  <button class="btn btn-primary" id="btn-gen-thumb" onclick="generateThumbnail()">Generate <span class="arrow">→</span></button>
-                  <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--fg-3)">
-                    <span>Powered by</span>
-                    <span style="background:linear-gradient(135deg,#ff0033,#ff6b35);color:#fff;padding:3px 8px;border-radius:4px;font-weight:700;font-size:10px;letter-spacing:0.06em">KLING 3.0</span>
-                  </div>
-                </div>
-                <div id="thumb-result" style="display:none">
-                  <div id="thumb-loading" class="loading" style="display:none"><div class="spinner"></div>Generating with Kling 3.0…</div>
-                  <div id="thumb-preview" style="display:none">
-                    <div style="aspect-ratio:16/9;background:linear-gradient(135deg,var(--ink-2) 0%,var(--ink-3) 100%);border-radius:8px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--fg-3);font-family:var(--mono);font-size:11px" id="thumb-canvas-area">
-                      <div style="font-size:32px">🎨</div>
-                      <div id="thumb-preview-label">Thumbnail generated</div>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-top:12px">
-                      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="generateThumbnail()">↻ Regenerate</button>
-                      <button class="btn btn-quiet" style="flex:1;justify-content:center">↓ Download</button>
-                    </div>
-                  </div>
+                  <button class="btn" style="opacity:0.5;cursor:not-allowed;margin-top:4px" disabled>Coming Soon</button>
                 </div>
               </div>
             </div>
@@ -2199,32 +2218,77 @@ function toggleDrill(drillId, card) {
   }
 }
 
+// ── Review progress bar ────────────────────────────────────────────────
+const _PROGRESS_MSGS = [
+  'Uploading video…',
+  'Reading video metadata…',
+  'Extracting transcript…',
+  'Analysing audio & visual signals…',
+  'Running Meta Tribe v2 brain simulation…',
+  'Generating scores & coaching…',
+  'Checking script alignment…',
+  'Finalising review…',
+];
+const _STAGE_LABELS = ['ingest','duration','transcript','signals','brain_sim','scoring','divergence','complete'];
+let _progressMsgTimer = null;
+
+function _updateProgressBar(log) {
+  const bar = document.getElementById('progress-bar');
+  const counter = document.getElementById('progress-counter');
+  const msgEl = document.getElementById('progress-msg');
+  const subEl = document.getElementById('progress-sub');
+  if (!bar) return;
+
+  const total = _STAGE_LABELS.length;
+  const doneCount = (log || []).filter(s => s.done && _STAGE_LABELS.includes(s.stage)).length;
+  const activeStage = (log || []).find(s => !s.done);
+  const current = Math.max(1, doneCount + 1);
+
+  bar.style.width = Math.round((doneCount / total) * 100) + '%';
+  counter.textContent = `STAGE ${current} / ${total}`;
+
+  if (activeStage) {
+    msgEl.textContent = activeStage.label || _PROGRESS_MSGS[Math.min(doneCount, _PROGRESS_MSGS.length - 1)];
+    subEl.textContent = activeStage.detail || '';
+  } else {
+    msgEl.textContent = _PROGRESS_MSGS[Math.min(doneCount, _PROGRESS_MSGS.length - 1)];
+    subEl.textContent = '';
+  }
+}
+
 // ── Review Results ─────────────────────────────────────────────────────
 async function pollReview() {
-  document.getElementById('results-loading').style.display = 'flex';
+  const loadEl = document.getElementById('results-loading');
+  loadEl.style.display = 'block';
   document.getElementById('results-content').style.display = 'none';
   _brainAttentionScores = [];
   document.getElementById('brain-scan-status').textContent = 'SCANNING…';
   document.getElementById('brain-scan-status').style.color = 'var(--signal)';
   startBrainWave();
+  _updateProgressBar([]);
 
   const poll = async () => {
     try {
       const prog = await apiFetch(`/projects/${currentProjectId}/review/${activeReviewId}/progress`);
 
-      if (prog.processing_log) renderStages(prog.processing_log);
+      if (prog.processing_log) {
+        renderStages(prog.processing_log);
+        _updateProgressBar(prog.processing_log);
+      }
       if (prog.tribe_used !== undefined) {
         const badge = document.getElementById('brain-model-badge');
         if (badge) badge.textContent = 'Meta Tribe v2';
       }
 
       if (prog.status === 'complete') {
+        const bar = document.getElementById('progress-bar');
+        if (bar) bar.style.width = '100%';
         const review = await apiFetch(`/projects/${currentProjectId}/review/${activeReviewId}`);
         stopBrainWave();
         renderResults(review);
       } else if (prog.status === 'failed') {
         stopBrainWave();
-        document.getElementById('results-loading').innerHTML = '<div class="alert alert-error">Review failed. Please try again.</div>';
+        loadEl.innerHTML = '<div class="alert alert-error" style="margin:40px 24px">Review failed. Please try again.</div>';
       } else {
         setTimeout(poll, 2000);
       }
@@ -2375,6 +2439,14 @@ function renderResults(review) {
 // ── Creative Studio ────────────────────────────────────────────────────
 const _thumbSelections = { style: 'Cinematic', mood: 'Energetic' };
 
+function copyTitle(btn) {
+  const text = btn.getAttribute('data-copy');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
 function switchCreativeTab(tab) {
   const isTitles = tab === 'titles';
   document.getElementById('creative-titles').style.display = isTitles ? 'block' : 'none';
@@ -2425,7 +2497,7 @@ function renderTitles(suggestions) {
       <div class="title-ctr">
         <div class="ctr-val ${cls}">${s.predicted_ctr_score || '—'}</div>
         <div class="ctr-lbl">CTR Score</div>
-        <button class="title-copy-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(s.title)}).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+        <button class="title-copy-btn" data-copy="${s.title.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" onclick="copyTitle(this)">Copy</button>
       </div>
     </div>`;
   }).join('');
