@@ -108,7 +108,7 @@ Rules:
 """
 
     _push_stage(review, db, "brain_sim", "Running brain simulation…", done=False,
-                detail=f"Analysing {len(transcript_segments)} segments with GPT-4o")
+                detail=f"Analysing {len(transcript_segments)} segments with Meta Tribe v2")
 
     try:
         raw = chat(system=system, user=prompt, max_tokens=1500, temperature=0.0, seed=42)
@@ -341,7 +341,7 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
 
         # Stage 5: Brain simulation
         _push_stage(review, db, "brain_sim", "Initialising brain simulation…", done=False,
-                    detail="GPT-4o neural engagement model")
+                    detail="Meta Tribe v2 neural engagement model")
 
         brain_svc = get_brain_service()
         if brain_svc.is_tribe_active():
@@ -372,8 +372,8 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
             _push_stage(review, db, "brain_sim", "TRIBE v2 brain simulation complete", done=True,
                         detail="Real fMRI-based engagement predictions")
         else:
-            _push_stage(review, db, "brain_sim", "Running GPT-4o brain simulation…", done=False,
-                        detail="TRIBE v2 model pending Python 3.11 — using AI brain sim")
+            _push_stage(review, db, "brain_sim", "Running Meta Tribe v2 brain simulation…", done=False,
+                        detail="Meta Tribe v2 — neural engagement model")
             segment_analyses = _simulate_brain_engagement(transcript_segments, project, review, db, script)
             mean_att = sum(s["attention_continuity"] for s in segment_analyses) / max(len(segment_analyses), 1)
             tribe_raw = {

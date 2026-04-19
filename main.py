@@ -8,7 +8,7 @@ from core.database import init_db
 from api.routers import auth, projects, ideas, scripts, review
 
 app = FastAPI(
-    title="Placeholdr API",
+    title="Nuro API",
     description="YouTube creator intelligence — idea gen, personalized scripting, and brain video review.",
     version="0.1.0",
 )
@@ -37,7 +37,7 @@ def serve_frontend():
     index = static_dir / "index.html"
     if index.exists():
         return FileResponse(str(index))
-    return {"message": "Placeholdr API running", "docs": "/docs"}
+    return {"message": "Nuro API running", "docs": "/docs"}
 
 
 @app.get("/health")

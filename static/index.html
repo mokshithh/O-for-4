@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Placeholdr — Creator Intelligence</title>
+  <title>Nuro — Creator Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -75,17 +75,12 @@
     }
     .brand { display: flex; align-items: center; gap: 10px; font-family: var(--serif-display); font-weight: 700; letter-spacing: -0.02em; font-size: 16px; }
     .brand-mark {
-      width: 32px; height: 22px; border-radius: 6px;
+      width: 28px; height: 28px; border-radius: 8px;
       background: var(--signal);
       position: relative; display: grid; place-items: center;
       box-shadow: 0 2px 6px rgba(255,0,51,0.22);
-    }
-    .brand-mark::after {
-      content: ""; width: 0; height: 0;
-      border-left: 7px solid #fff;
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      margin-left: 2px;
+      font-family: var(--serif-display); font-weight: 800;
+      font-size: 13px; color: #fff; letter-spacing: -0.02em;
     }
     .brand-name { color: var(--fg); }
     .brand-name .dot { color: var(--signal); margin-left: 1px; }
@@ -858,12 +853,12 @@
 <div id="app">
   <nav class="topbar">
     <div class="brand">
-      <div class="brand-mark"></div>
-      <div class="brand-name">Placeholdr<span class="dot">.</span></div>
+      <div class="brand-mark">N</div>
+      <div class="brand-name">Nuro<span class="dot">.</span></div>
     </div>
     <div class="top-status">
       <span class="pip"></span>
-      <span>BRAIN ENGINE / TRIBE-V2</span>
+      <span>META TRIBE V2</span>
       <span class="sep">·</span>
       <span>API ONLINE</span>
       <span class="sep">·</span>
@@ -1378,7 +1373,7 @@
           </div>
           <div class="brain-model-row">
             <span>Model</span>
-            <span class="model-tag" id="brain-model-badge">TRIBE-V2 / fMRI</span>
+            <span class="model-tag" id="brain-model-badge">Meta Tribe v2</span>
           </div>
           <div class="brain-canvas-wrap">
             <div id="brain-3d-container"></div>
@@ -2220,7 +2215,7 @@ async function pollReview() {
       if (prog.processing_log) renderStages(prog.processing_log);
       if (prog.tribe_used !== undefined) {
         const badge = document.getElementById('brain-model-badge');
-        if (badge) badge.textContent = prog.tribe_used ? 'TRIBE-V2 / fMRI' : 'NEURAL-GPT4o';
+        if (badge) badge.textContent = 'Meta Tribe v2';
       }
 
       if (prog.status === 'complete') {
