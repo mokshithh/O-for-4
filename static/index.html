@@ -804,6 +804,7 @@
     </div>
     <div class="nav-right" id="nav-right">
       <span id="nav-user" class="nav-user" style="display:none"></span>
+      <button class="btn btn-ghost" id="btn-dashboard" style="display:none" onclick="showScreen('screen-dashboard')">← Dashboard</button>
       <button class="btn btn-ghost" id="btn-logout" style="display:none" onclick="logout()">Sign out</button>
     </div>
   </nav>
@@ -1484,6 +1485,7 @@ function setNavUser(email) {
   elU.textContent = email;
   elU.style.display = '';
   document.getElementById('btn-logout').style.display = '';
+  document.getElementById('btn-dashboard').style.display = '';
 }
 
 function logout() {
@@ -1493,6 +1495,7 @@ function logout() {
   showScreen('screen-auth');
   document.getElementById('nav-user').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'none';
+  document.getElementById('btn-dashboard').style.display = 'none';
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────
