@@ -5,6 +5,7 @@ from core.database import get_db
 from core.security import get_current_user
 from models.user import User
 from models.project import Project, ProjectStatus
+from models.review import VideoReview, ReviewStatus
 from schemas.project import CreatorSetupRequest, ProjectResponse, ProjectListResponse
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -33,7 +34,30 @@ def create_project(body: CreatorSetupRequest, db: Session = Depends(get_db), cur
 @router.get("", response_model=ProjectListResponse)
 def list_projects(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     projects = db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.created_at.desc()).all()
-    return ProjectListResponse(projects=projects, total=len(projects))
+
+    # Attach latest completed review per project (single query, no N+1)
+    project_ids = [p.id for p in projects]
+    latest_reviews: dict[str, VideoReview] = {}
+    if project_ids:
+        reviews = (
+            db.query(VideoReview)
+            .filter(VideoReview.project_id.in_(project_ids), VideoReview.status == ReviewStatus.complete)
+            .order_by(VideoReview.created_at.desc())
+            .all()
+        )
+        for r in reviews:
+            if r.project_id not in latest_reviews:
+                latest_reviews[r.project_id] = r
+
+    project_responses = []
+    for p in projects:
+        r = latest_reviews.get(p.id)
+        pr = ProjectResponse.model_validate(p)
+        pr.latest_review_id = r.id if r else None
+        pr.latest_review_score = r.overall_score if r else None
+        project_responses.append(pr)
+
+    return ProjectListResponse(projects=project_responses, total=len(project_responses))
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

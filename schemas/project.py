@@ -30,6 +30,8 @@ class ProjectResponse(BaseModel):
     selected_idea_title: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
+    latest_review_id: Optional[str] = None
+    latest_review_score: Optional[float] = None
 
     class Config:
         from_attributes = True

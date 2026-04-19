@@ -695,6 +695,10 @@
     .project-row .p-status.in-progress::before { background: var(--signal); }
     .project-row .p-arrow { font-family: var(--mono); color: var(--fg-3); text-align: right; transition: color .15s, transform .15s; }
     .project-row:hover .p-arrow { color: var(--signal); transform: translateX(2px); }
+    .p-score-pill { font-family: var(--serif-display); font-size: 17px; font-weight: 700; letter-spacing: -0.02em; min-width: 52px; text-align: right; }
+    .p-score-pill.score-pos { color: var(--pos); }
+    .p-score-pill.score-warn { color: var(--warn); }
+    .p-score-pill.score-neg { color: var(--neg); }
 
     /* ── Auth screen ─────────────────────────────────────────────── */
     .auth-grid {
@@ -1633,16 +1637,24 @@ async function loadDashboard() {
       return;
     }
     list.innerHTML = data.projects.map((p, i) => {
-      const statusCls = p.status === 'complete' ? 'complete' : (p.status === 'idea_generation' || p.status === 'script_ready' ? 'in-progress' : '');
+      const hasReview = !!p.latest_review_id;
+      const statusCls = hasReview ? 'complete' : (p.status === 'idea_generation' || p.status === 'script_ready' ? 'in-progress' : '');
+      const scorePill = hasReview && p.latest_review_score != null
+        ? `<span class="p-score-pill ${p.latest_review_score >= 70 ? 'score-pos' : p.latest_review_score >= 45 ? 'score-warn' : 'score-neg'}">${Math.round(p.latest_review_score)}<span style="font-size:9px;opacity:0.7">/100</span></span>`
+        : '';
+      const reviewBadge = hasReview
+        ? `<span class="p-status complete">reviewed ✓</span>`
+        : `<span class="p-status ${statusCls}">${(p.status || '').replace(/_/g,' ')}</span>`;
       return `
-      <div class="project-row" onclick="openProject('${p.id}')">
+      <div class="project-row" onclick="openProject('${p.id}','${p.latest_review_id || ''}')">
         <span class="p-num num">${(i+1).toString().padStart(2,'0')}</span>
         <div>
           <div class="p-title">${p.title || 'Untitled project'}</div>
           <div class="p-meta">${p.niche || '—'}</div>
         </div>
         <div class="p-niche">${p.target_audience || ''}</div>
-        <span class="p-status ${statusCls}">${(p.status || '').replace(/_/g,' ')}</span>
+        ${scorePill}
+        ${reviewBadge}
         <span class="p-arrow">→</span>
       </div>`;
     }).join('');
@@ -1651,9 +1663,28 @@ async function loadDashboard() {
   }
 }
 
-function openProject(id) {
+async function openProject(id, reviewId) {
   currentProjectId = id;
-  showScreen('screen-review-submit');
+  if (reviewId) {
+    // Project has a completed review — load it directly
+    activeReviewId = reviewId;
+    showScreen('screen-results');
+    document.getElementById('results-loading').style.display = 'block';
+    document.getElementById('results-content').style.display = 'none';
+    try {
+      const [review, prog] = await Promise.all([
+        apiFetch(`/projects/${id}/review/${reviewId}`),
+        apiFetch(`/projects/${id}/review/${reviewId}/progress`),
+      ]);
+      if (prog.processing_log) renderStages(prog.processing_log);
+      renderResults(review);
+    } catch (err) {
+      document.getElementById('results-loading').innerHTML =
+        `<div class="alert alert-error" style="margin:40px 24px">Could not load review: ${err.message}</div>`;
+    }
+  } else {
+    showScreen('screen-review-submit');
+  }
 }
 
 // ── Bubble selectors ───────────────────────────────────────────────────
