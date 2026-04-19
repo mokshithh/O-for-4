@@ -111,15 +111,15 @@ def _transcribe_with_openai(audio_path: str) -> Optional[list[dict]]:
                 timestamp_granularities=["segment"],
             )
         raw_segs = getattr(response, "segments", None) or []
-        return [
-            {
-                "text": s["text"].strip(),
-                "start": float(s["start"]),
-                "end": float(s["end"]),
-            }
-            for s in raw_segs
-            if s.get("text", "").strip()
-        ]
+        result = []
+        for s in raw_segs:
+            # OpenAI SDK returns TranscriptionSegment objects (attribute access)
+            text = getattr(s, "text", None) or s.get("text", "") if hasattr(s, "get") else getattr(s, "text", "")
+            start = getattr(s, "start", None) if not hasattr(s, "get") else s.get("start", 0)
+            end = getattr(s, "end", None) if not hasattr(s, "get") else s.get("end", 0)
+            if text and str(text).strip():
+                result.append({"text": str(text).strip(), "start": float(start), "end": float(end)})
+        return result
     except Exception as exc:
         logger.warning("OpenAI Whisper API failed: %s", exc)
         return None
