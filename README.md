@@ -10,7 +10,10 @@
 
 | Name | Role |
 |------|------|
-| Mokshith | Full-stack / AI |
+| Anhad | Video Production and Submission |
+| Atharva | Data Analysis and Cleaning |
+| Hariesh | Front End Designing |
+| Mokshith | Backend + Everything Else |
 
 ---
 
