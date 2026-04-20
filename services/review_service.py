@@ -17,7 +17,8 @@ from models.review import VideoReview, ReviewSegment, VideoSource, ReviewStatus,
 from models.script import Script
 from brain.service import get_brain_service
 from services import transcript_service, video_service
-from services.claude_client import chat
+from services.claude_client import chat, cheap_chat
+from services.utils import parse_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -112,12 +113,7 @@ Rules:
 
     try:
         raw = chat(system=system, user=prompt, max_tokens=1500, temperature=0.0, seed=42)
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        scored = json.loads(raw)
+        scored = parse_json_response(raw)
     except Exception as exc:
         logger.warning("Brain simulation failed: %s — using fallback curve", exc)
         scored = _fallback_engagement_curve(len(transcript_segments))
@@ -257,12 +253,7 @@ Return ONLY the JSON object.
 
     raw = chat(system=system, user=prompt, max_tokens=2000, temperature=0.0, seed=42)
     try:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw)
+        return parse_json_response(raw)
     except Exception as exc:
         logger.error("Review parse failed: %s", exc)
         return {
@@ -280,13 +271,8 @@ def _check_script_divergence(transcript: str, script: Script) -> tuple[bool, Opt
     system = "Compare a YouTube script to an actual video transcript. Return JSON only: {\"diverged\": bool, \"notes\": \"explanation or null\"}"
     prompt = f"Script title: {script.title}\nScript hook: {script.hook or 'N/A'}\nTranscript: {transcript[:1000]}\nSignificant divergence only (not minor improv)."
     try:
-        raw = chat(system=system, user=prompt, max_tokens=300, temperature=0.0, seed=42)
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw)
+        raw = cheap_chat(system=system, user=prompt, max_tokens=300, temperature=0.0, seed=42)
+        data = parse_json_response(raw)
         return data.get("diverged", False), data.get("notes")
     except Exception:
         return False, None
@@ -335,7 +321,6 @@ async def process_review(review: VideoReview, video_path: str, db: Session) -> V
         # Stage 4: Audio/visual signal extraction marker
         _push_stage(review, db, "signals", "Extracting audio & visual signals…", done=False,
                     detail="Analysing pacing, tone, and structure")
-        time.sleep(0.3)
         _push_stage(review, db, "signals", "Audio & visual signals extracted", done=True,
                     detail=f"Niche: {project.niche} · Style: {project.video_style or 'N/A'}")
 

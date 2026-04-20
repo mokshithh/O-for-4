@@ -1,5 +1,7 @@
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+import aiofiles
+import os
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Request
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
@@ -33,13 +35,25 @@ async def upload_video(
 ):
     project = _get_project(project_id, current_user.id, db)
 
-    # Size guard
-    content = await file.read()
+    # Stream to disk with size guard — avoids loading entire file into memory
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
-    if len(content) > max_bytes:
-        raise HTTPException(status_code=413, detail=f"File too large. Max {settings.max_upload_size_mb}MB.")
-
-    temp_path = video_service.save_upload(content, file.filename or "upload.mp4")
+    import tempfile, pathlib
+    suffix = pathlib.Path(file.filename or "upload.mp4").suffix or ".mp4"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=settings.temp_upload_dir)
+    tmp.close()
+    temp_path = tmp.name
+    written = 0
+    chunk_size = 1024 * 1024  # 1 MB
+    try:
+        async with aiofiles.open(temp_path, "wb") as f_out:
+            while chunk := await file.read(chunk_size):
+                written += len(chunk)
+                if written > max_bytes:
+                    raise HTTPException(status_code=413, detail=f"File too large. Max {settings.max_upload_size_mb}MB.")
+                await f_out.write(chunk)
+    except HTTPException:
+        os.unlink(temp_path)
+        raise
 
     review = VideoReview(
         project_id=project_id,

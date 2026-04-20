@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from models.project import Project, ProjectStatus
 from models.script import Script, IdeaOption
 from services.claude_client import chat
+from services.utils import parse_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +103,7 @@ Requirements:
     raw = chat(system=system, user=prompt, max_tokens=4000)
 
     try:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw)
+        data = parse_json_response(raw)
     except Exception as exc:
         logger.error("Script JSON parse failed: %s\nRaw: %s", exc, raw[:500])
         raise ValueError("Script generation returned invalid JSON") from exc

@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
+from core.config import settings
 from core.database import init_db
 from api.routers import auth, projects, ideas, scripts, review
 
@@ -15,8 +16,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=settings.cors_origins != "*",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,6 +44,32 @@ def serve_frontend():
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/health/detailed")
+def health_detailed():
+    from core.database import SessionLocal
+    db_ok = False
+    try:
+        db = SessionLocal()
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db.close()
+        db_ok = True
+    except Exception:
+        pass
+    openai_key_set = bool(settings.openai_api_key)
+    supabase_set = bool(settings.supabase_url and settings.supabase_service_role_key)
+    return {
+        "status": "ok" if (db_ok and openai_key_set) else "degraded",
+        "version": "0.1.0",
+        "environment": settings.environment,
+        "checks": {
+            "database": "ok" if db_ok else "error",
+            "openai_key": "set" if openai_key_set else "missing",
+            "supabase": "set" if supabase_set else "missing",
+            "tribe_enabled": settings.tribe_enabled,
+        },
+    }
 
 
 @app.on_event("startup")

@@ -6,12 +6,14 @@ Generates the top-5 ranked content ideas for a creator using dataset signals + G
 from __future__ import annotations
 import json
 import re
+import time
 import logging
 from sqlalchemy.orm import Session
 
 from models.project import Project, ProjectStatus
 from models.script import IdeaOption
 from services.claude_client import chat
+from services.utils import parse_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +51,23 @@ PERSONALIZATION_QUESTIONS = [
 ]
 
 
+_signals_cache: dict[str, tuple[dict, float]] = {}
+_SIGNALS_TTL = 300  # 5 minutes
+
+
 def get_dataset_signals(niche: str, goal: str = "") -> dict:
+    key = f"{niche}|{goal}"
+    cached, ts = _signals_cache.get(key, ({}, 0.0))
+    if cached and (time.time() - ts) < _SIGNALS_TTL:
+        return cached
     try:
         from services.dataset.trend_alignment import get_trend_service
-        return get_trend_service().get_idea_signals(niche, goal)
+        result = get_trend_service().get_idea_signals(niche, goal)
     except Exception as exc:
         logger.warning("Dataset signals unavailable: %s", exc)
-        return _fallback_signals(niche, goal)
+        result = _fallback_signals(niche, goal)
+    _signals_cache[key] = (result, time.time())
+    return result
 
 
 def _fallback_signals(niche: str, goal: str) -> dict:
@@ -123,24 +135,17 @@ def _fallback_signals(niche: str, goal: str) -> dict:
 
 
 def _extract_json_array(raw: str) -> list:
-    """Robustly extract a JSON array from LLM output regardless of formatting."""
-    raw = raw.strip()
-    # Strip markdown fences
-    raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
-    raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
-    raw = raw.strip()
-
-    # Try direct parse first
+    """Extract a JSON array from LLM output, delegating fence stripping to shared util."""
     try:
-        result = json.loads(raw)
+        result = parse_json_response(raw)
         if isinstance(result, list):
             return result
         if isinstance(result, dict) and "ideas" in result:
             return result["ideas"]
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         pass
 
-    # Find first [...] block
+    # Last resort: find first [...] block
     match = re.search(r"\[.*\]", raw, re.DOTALL)
     if match:
         try:
