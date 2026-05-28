@@ -1,0 +1,122 @@
+name: CI
+
+# Lightweight CI for Nuro.
+#
+# This workflow is intentionally safe and non-invasive:
+#   - It does NOT modify any application code.
+#   - It does NOT require any secrets to be configured.
+#   - It uses strict-only flake8 rules (real Python errors only, not style),
+#     so existing code in the repo will not suddenly start failing on it.
+#   - It does NOT block deploys — Render's auto-deploy from main is
+#     unaffected unless a branch protection rule is added later that
+#     explicitly requires this workflow to pass.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  lint:
+    name: Lint (syntax and undefined names)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Run flake8 on api, services, and core
+        # Strict-only checks: real Python errors only
+        # (E9 = syntax errors, F63/F7/F82 = undefined names and broken imports).
+        # Pure style issues are intentionally ignored so existing code
+        # is not affected by adding this workflow.
+        run: |
+          flake8 api services core \
+            --count \
+            --select=E9,F63,F7,F82 \
+            --show-source \
+            --statistics
+
+  build:
+    name: Install dependencies and verify build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify dataset decompresses (mirrors render.yaml build step)
+        run: |
+          mkdir -p data
+          python -c "import lzma, shutil; shutil.copyfileobj(lzma.open('youtube_trending_cleaned.csv.xz'), open('data/youtube_trending.csv','wb'))"
+          ls -lh data/youtube_trending.csv
+
+  # ---------------------------------------------------------------------------
+  # Playwright end-to-end tests (test_playwright.py)
+  #
+  # Disabled by default because the existing auth code calls out to Supabase
+  # at startup and the AI services require a real OpenAI key, both of which
+  # need either real secrets or a TEST_MODE bypass in the application code.
+  #
+  # To enable, add the required repository secrets (OPENAI_API_KEY,
+  # SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SECRET_KEY)
+  # and uncomment the job below.
+  #
+  # playwright:
+  #   name: Playwright end-to-end tests
+  #   runs-on: ubuntu-latest
+  #   needs: [ lint, build ]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements.txt
+  #         pip install playwright
+  #         playwright install --with-deps chromium
+  #     - run: |
+  #         mkdir -p data
+  #         python -c "import lzma, shutil; shutil.copyfileobj(lzma.open('youtube_trending_cleaned.csv.xz'), open('data/youtube_trending.csv','wb'))"
+  #     - name: Start server in background and wait for /health
+  #       env:
+  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  #         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  #         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  #         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  #         DATABASE_URL: sqlite:///./nuro.db
+  #       run: |
+  #         uvicorn main:app --port 8765 &
+  #         for i in {1..30}; do
+  #           if curl -fs http://localhost:8765/health >/dev/null; then break; fi
+  #           sleep 1
+  #         done
+  #     - run: python test_playwright.py
